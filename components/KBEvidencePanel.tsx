@@ -5,7 +5,7 @@
  * (Knowledge Base mode) as cited evidence about the contradicted routing. It
  * never supplies a price and never gates: prices come only from the
  * deterministic solver. Markdown is rendered SAFELY as React text nodes via
- * lib/markdownBlocks (no dangerouslySetInnerHTML; only http(s) links).
+ * lib/markdownBlocks (never injects raw HTML; only http(s) links).
  */
 import type { KbEvidence } from "@/lib/kbEvidence";
 import { markdownToBlocks, splitInline, type Block } from "@/lib/markdownBlocks";

@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* Don't scan planning/review docs for class candidates: they quote class
+   names (e.g. `text-[length:var(--text-*)]`) that compile to invalid or
+   unintended CSS. Only real source files should generate utilities. */
+@source not "../.agents";
+@source not "../*.md";
 
 @theme {
   /* Colors */
