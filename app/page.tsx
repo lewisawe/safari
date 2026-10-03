@@ -94,34 +94,36 @@ export default function HomePage() {
         className="relative flex min-h-[82vh] w-full flex-col justify-end px-[var(--spacing-24)] pb-[var(--spacing-56)] pt-[var(--spacing-80)] sm:px-[var(--spacing-40)]"
       >
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-[var(--spacing-24)]">
-          <h1 className="max-w-[18ch] font-[family-name:var(--font-jobydisplay)] text-[clamp(40px,8vw,80px)] font-medium leading-[1.02] tracking-[var(--tracking-heading-lg)] text-[var(--color-parchment-cream)]">
+          <h1 className="hero-text max-w-[18ch] font-[family-name:var(--font-jobydisplay)] text-[clamp(40px,8vw,80px)] font-medium leading-[1.02] tracking-[var(--tracking-heading-lg)] text-[var(--color-parchment-cream)]">
             Proves the cheapest award‑travel routing. Won&rsquo;t guess when
             sources disagree.
           </h1>
-          <p className="max-w-[46ch] font-[family-name:var(--font-jobytext)] text-[var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[var(--color-parchment-cream)]">
+          <p className="hero-text max-w-[46ch] font-[family-name:var(--font-jobytext)] text-[var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[var(--color-parchment-cream)]">
             An agent that walks a typed Sanity knowledge graph, pauses the
             moment its sources contradict each other, and hands the arithmetic
             to a deterministic solver that shows its proof.
           </p>
 
-          {/* Two outlined/ghost CTAs — never filled rectangles */}
+          {/* Two outlined/ghost CTAs — never filled rectangles. A faint dark
+              translucent fill keeps the ghost pills legible over the bright
+              amber sky without becoming a solid filled button. */}
           <div className="flex flex-wrap items-center gap-[var(--spacing-16)]">
             <Link
               href="/solver"
-              className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline"
+              className="hero-text inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-parchment-cream)] bg-[rgba(14,22,32,0.28)] px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline backdrop-blur-sm"
             >
               Model‑free solver →
             </Link>
             <Link
               href="/agent"
-              className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline"
+              className="hero-text inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-parchment-cream)] bg-[rgba(14,22,32,0.28)] px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline backdrop-blur-sm"
             >
               Agent path →
             </Link>
           </div>
 
           {/* Synthetic-data framing as a bordered caption (not a second bar) */}
-          <p className="mt-[var(--spacing-8)] max-w-[52ch] border-l-[3px] border-[var(--color-parchment-cream)] pl-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-sm)] font-[450] leading-[var(--leading-body-sm)] tracking-[var(--tracking-body-sm)] text-[var(--color-parchment-cream)]">
+          <p className="hero-text mt-[var(--spacing-8)] max-w-[52ch] border-l-[3px] border-[var(--color-parchment-cream)] pl-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-sm)] font-[450] leading-[var(--leading-body-sm)] tracking-[var(--tracking-body-sm)] text-[var(--color-parchment-cream)]">
             Every routing, chart, and contradiction here is a synthetic dataset
             built to exercise the reasoning — not real award pricing. The
             discipline is the point.
