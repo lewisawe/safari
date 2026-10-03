@@ -9,6 +9,7 @@
  */
 import type { KbEvidence } from "@/lib/kbEvidence";
 import { markdownToBlocks, splitInline, type Block } from "@/lib/markdownBlocks";
+import { kbErrorTitle } from "@/lib/kbToolEvidence";
 
 export interface KBEvidencePanelProps {
   evidence?: KbEvidence | null;
@@ -97,15 +98,37 @@ export function KBEvidencePanel({ evidence, loading }: KBEvidencePanelProps) {
     );
   }
 
-  if (!evidence || !evidence.configured || !evidence.ok) {
-    const detail =
-      evidence && evidence.configured && !evidence.ok ? evidence.message : null;
+  if (!evidence || !evidence.configured) {
+    const detail = evidence && !evidence.configured ? evidence.message : null;
     return (
       <section aria-label="Knowledge Base evidence" className={CARD_CLASS}>
         {header}
         <p className={`mt-[var(--spacing-16)] mb-0 ${MUTED_CLASS}`}>
-          Knowledge Base not connected yet.
-          {detail ? ` ${detail}` : ""}
+          {detail ?? "Knowledge Base not connected yet."}
+        </p>
+      </section>
+    );
+  }
+
+  if (!evidence.ok) {
+    // Typed KB error (kind + human message). Evidence only: never affects pricing.
+    return (
+      <section aria-label="Knowledge Base evidence" className={CARD_CLASS}>
+        {header}
+        <div
+          role="status"
+          className="mt-[var(--spacing-16)] flex flex-wrap items-baseline gap-[var(--spacing-8)]"
+        >
+          <p className="m-0 font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-body-lg)] font-medium text-[var(--color-carbon-ink)]">
+            {kbErrorTitle(evidence.error)}
+          </p>
+          <code className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-outlined-action)_55%,transparent)] px-[0.45rem] py-[0.1rem] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+            {evidence.error}
+          </code>
+        </div>
+        <p className={`mt-[var(--spacing-8)] mb-0 ${BODY_CLASS}`}>{evidence.message}</p>
+        <p className={`mt-[var(--spacing-8)] mb-0 ${MUTED_CLASS}`}>
+          Pricing is unaffected; prices come only from the deterministic solver.
         </p>
       </section>
     );

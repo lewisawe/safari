@@ -41,6 +41,7 @@ import { ProofTable } from "@/components/ProofTable";
 import { NotComputedCard } from "@/components/NotComputedCard";
 import { KBEvidencePanel } from "@/components/KBEvidencePanel";
 import type { KbEvidence } from "@/lib/kbEvidence";
+import { kbToolOutputToEvidence } from "@/lib/kbToolEvidence";
 
 // --- Narrow local mirrors of the tool-result shapes (from /api/chat tools) ---
 
@@ -52,10 +53,9 @@ interface TraverseOutput {
   via?: string;
 }
 
-/** readKnowledgeBase tool output (Context MCP KB mode) — evidence only. */
-type ReadKnowledgeBaseOutput =
-  | { markdown: string; paths: string[]; via: string; presentationOnly: true }
-  | { error: string; message: string; presentationOnly: true };
+/** readKnowledgeBase tool output (Context MCP KB mode) — evidence only.
+ *  Mapped to KbEvidence by the pure lib/kbToolEvidence helper, which keeps
+ *  the typed error kind + message. */
 
 interface KBContradiction {
   _id: string;
@@ -364,25 +364,7 @@ function PartView({ part }: { part: MessagePart }) {
 
   // Knowledge Base evidence (Context MCP) — presentation only, never a price.
   if (part.type === "tool-readKnowledgeBase" && hasOutput(part)) {
-    const out = part.output as ReadKnowledgeBaseOutput;
-    const evidence: KbEvidence =
-      "markdown" in out && typeof out.markdown === "string"
-        ? {
-            configured: true,
-            ok: true,
-            via: "context-mcp (knowledge_base)",
-            kbId: null,
-            outlineTitle: null,
-            entries: (out.paths ?? []).map((p) => ({ path: p, summary: "" })),
-            markdown: out.markdown,
-            citations: [],
-          }
-        : {
-            configured: true,
-            ok: false,
-            error: "tool_error",
-            message: "message" in out ? String(out.message) : "Knowledge Base read failed.",
-          };
+    const evidence: KbEvidence = kbToolOutputToEvidence(part.output);
     return (
       <div>
         <ToolBadge
