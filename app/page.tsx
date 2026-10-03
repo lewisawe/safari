@@ -34,17 +34,26 @@ import Link from "next/link";
  * The gradient is deepened toward the lower-centre where the headline sits so
  * Parchment-Cream text keeps >=4.5:1 contrast with NO dark scrim added.
  */
+// Cinematic golden-hour aviation hero. The crafted vector scene
+// (public/hero-aviation.svg — warm amber sky, sun, mountain silhouettes, birds)
+// carries the imagery; a contrast gradient is layered BELOW it, deepened toward
+// the lower-left where the headline/caption sit so Parchment-Cream text keeps
+// >=4.5:1 with no flat scrim plate. The vector provides depth the old 3-stop
+// CSS gradient lacked, and fills the right side of the frame. To swap in a
+// photograph later, point --hero-photo at an optimized (<=2560px, <2MB) asset;
+// it layers above the vector, which then degrades to a graceful fallback.
 const heroStyle: React.CSSProperties & Record<string, string> = {
   "--hero-photo": "none",
   backgroundImage:
     "var(--hero-photo)," +
-    // deepen toward the headline anchor (lower-centre) for text contrast
-    "radial-gradient(120% 95% at 50% 118%, rgba(14,22,32,0.92) 0%, rgba(14,22,32,0.62) 34%, rgba(14,22,32,0) 66%)," +
-    // golden-hour: warm amber crown -> cool dusk blue-grey base
-    "linear-gradient(180deg, #eb6110 0%, #f0914b 20%, #c98a63 42%, #5f6f85 68%, #2b3a52 86%, #0e1620 100%)",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
+    // the crafted aviation vector — the actual hero image
+    "url('/hero-aviation.svg')," +
+    // text-contrast wash, anchored lower-left under the copy, fading out upward
+    "linear-gradient(105deg, rgba(14,22,32,0.78) 0%, rgba(14,22,32,0.42) 38%, rgba(14,22,32,0) 64%)," +
+    "linear-gradient(0deg, rgba(14,22,32,0.70) 0%, rgba(14,22,32,0.18) 30%, rgba(14,22,32,0) 55%)",
+  backgroundSize: "cover, cover, cover, cover",
+  backgroundPosition: "center, center, center, center",
+  backgroundRepeat: "no-repeat, no-repeat, no-repeat, no-repeat",
 };
 
 type Beat = {
@@ -75,11 +84,11 @@ export default function HomePage() {
   return (
     <main className="font-[family-name:var(--font-jobytext)] text-[var(--color-carbon-ink)]">
       {/* ---------------------------------------------------------------- */}
-      {/* Cinematic full-bleed hero — text floats on the gradient, no scrim */}
+      {/* Cinematic full-bleed hero — text floats on the aviation vector    */}
       {/* ---------------------------------------------------------------- */}
       <section
         style={heroStyle}
-        className="relative flex min-h-[72vh] w-full flex-col justify-end px-[var(--spacing-24)] pb-[var(--spacing-56)] pt-[var(--spacing-80)] sm:px-[var(--spacing-40)]"
+        className="relative flex min-h-[82vh] w-full flex-col justify-end px-[var(--spacing-24)] pb-[var(--spacing-56)] pt-[var(--spacing-80)] sm:px-[var(--spacing-40)]"
       >
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-[var(--spacing-24)]">
           <h1 className="max-w-[18ch] font-[family-name:var(--font-jobydisplay)] text-[clamp(40px,8vw,80px)] font-medium leading-[1.02] tracking-[var(--tracking-heading-lg)] text-[var(--color-parchment-cream)]">
