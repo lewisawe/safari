@@ -21,6 +21,7 @@
 // solver never reads them.
 
 import { createClient } from "@sanity/client";
+import { DEMO_CONTRADICTION_ID, DEMO_USER_DECISION_ID } from "../lib/demoReset";
 
 // ----------------------------------------------------------------------------
 // 0. Fail-closed env check (before any client / any write).
@@ -64,11 +65,11 @@ const client = createClient({
 
 const ref = (id: string) => ({ _type: "reference" as const, _ref: id });
 
-// Deterministic derived id for the carry-forward decision (mirrors
-// lib/resolution.ts userDecisionId); kept inline so the seed has no runtime
-// dependency on app code.
-const CONTRADICTION_ID = "contra.ana.sfonrt.business";
-const USER_DECISION_ID = `userDecision.${CONTRADICTION_ID}`;
+// Deterministic ids for the gate (the contradiction and its derived
+// carry-forward decision). Shared with POST /api/demo/reset via
+// lib/demoReset.ts, which only holds constants and a type import.
+const CONTRADICTION_ID = DEMO_CONTRADICTION_ID;
+const USER_DECISION_ID = DEMO_USER_DECISION_ID;
 
 // ----------------------------------------------------------------------------
 // §5.1 Currencies

@@ -62,6 +62,9 @@ Copy `.env.example` to `.env.local` and fill in the values. Full matrix:
 | `SANITY_CONTEXT_MCP_URL` | Optional | Sanity Context MCP endpoint URL. With the token, traversal runs through Context MCP `groq_query`. |
 | `SANITY_CONTEXT_TOKEN` | Optional | **Organization** token with the Context Viewer role (project tokens get 403 `contextGrantRequired`). |
 | `SANITY_KB_ID` | Optional | Knowledge Base id (`kb…`). Enables the cited Knowledge Base evidence panel and the agent's `readKnowledgeBase` tool. |
+| `AGENT_DAILY_CAP` | Optional (default `50`) | Global agent runs per UTC day, counted in Sanity. See [Deploy (Vercel)](#deploy-vercel). |
+| `AGENT_RATE_PER_HOUR` | Optional (default `5`) | Agent questions per visitor IP per hour (per server instance). |
+| `AGENT_ENABLED` | Optional | `false` switches the agent off (the page shows the disabled card). |
 
 With no model provider configured (no `MODEL_PROVIDER=bedrock` and no
 `MODEL_PROVIDER_API_KEY`), the `/api/chat` route returns a typed
@@ -165,11 +168,8 @@ These touch live services and were **not** run by the automation:
    It targets the same `projectId` (`62hh3v9t`) / `production` dataset and
    derives its `authority` options from `safari/lib/authority.ts`, so the schema
    enum and the solver rank can never drift.
-7. **(Optional) Deploy** the Next.js app:
-   ```bash
-   npx vercel
-   ```
-   And set the same env vars in the Vercel project. The model key stays optional.
+7. **(Optional) Deploy** the Next.js app. See [Deploy (Vercel)](#deploy-vercel)
+   for the env vars and the cost guard.
 
 8. **(Optional) Set `MODEL_PROVIDER_API_KEY`** to enable the `/agent` LLM path.
    The `/solver` path already works without it.
@@ -177,6 +177,59 @@ These touch live services and were **not** run by the automation:
 > If you only want to see the deterministic result, you can stop after `npm run
 > seed` and use `/solver`, or just run `npx vitest run` to see the end-to-end
 > pipeline pass offline with no live steps at all.
+
+---
+
+## Deploy (Vercel)
+
+```bash
+npx vercel          # link + preview
+npx vercel --prod   # production
+```
+
+Set these in the Vercel project (Settings → Environment Variables). Secrets are
+marked; never commit them. `npm run build` succeeds with any of them missing:
+a missing var only turns its feature off at runtime (typed fallback, never a
+crash or a guessed price).
+
+| Variable | Secret? | Needed for |
+|---|---|---|
+| `SANITY_PROJECT_ID` | no | every Sanity read/write |
+| `SANITY_DATASET` | no | dataset name (default `production`) |
+| `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET` | no | optional fallbacks for the two above; not needed when they are set |
+| `SANITY_API_READ_TOKEN` | **secret** | optional for a public dataset |
+| `SANITY_API_WRITE_TOKEN` | **secret** | resolve, Reset demo, and the agent's daily-cap counter (without it the agent fails closed) |
+| `SANITY_CONTEXT_MCP_URL` | no | optional: traversal via Context MCP |
+| `SANITY_CONTEXT_TOKEN` | **secret** | optional: org token, Context Viewer role |
+| `SANITY_KB_ID` | no | optional: Knowledge Base evidence |
+| `MODEL_PROVIDER` | no | `bedrock` |
+| `MODEL_NAME` | no | `us.amazon.nova-pro-v1:0` (the default) |
+| `AWS_REGION` | no | `us-east-1` |
+| `AWS_ACCESS_KEY_ID` | **secret** | Bedrock: an IAM user limited to `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on Nova Pro / its inference profile |
+| `AWS_SECRET_ACCESS_KEY` | **secret** | same IAM user |
+| `AGENT_DAILY_CAP` | no | global agent runs per UTC day (default `50`) |
+| `AGENT_RATE_PER_HOUR` | no | agent questions per IP per hour (default `5`) |
+| `AGENT_ENABLED` | no | `false` is the kill switch |
+
+`MODEL_PROVIDER_API_KEY` is only for `openai`/`anthropic`; leave it unset for
+Bedrock. Do **not** set `AWS_PROFILE` on Vercel: the AWS credential chain skips
+the env keys whenever `AWS_PROFILE` is set. Locally, `AWS_PROFILE` in
+`.env.local` keeps working.
+
+### Judge flow and cost guard
+
+- `/solver` needs no model and costs nothing. It runs the full pipeline.
+- `/agent` bills Bedrock, so every send is checked before any model call: an
+  operator kill switch, request caps (12 messages, 2,000 characters per
+  question), a per-IP hourly limit, and a global daily cap. The cap is a Sanity
+  document per UTC day (`demoUsage.agent.<YYYY-MM-DD>`, incremented atomically).
+  If that counter can't be written, the agent refuses the run (fails closed).
+  Each run is also bounded by `maxOutputTokens: 1200` per step and 8 steps.
+  A refused send shows a card pointing at `/solver`.
+- **Reset demo** (on `/solver` and `/agent`) calls `POST /api/demo/reset`,
+  which deletes the stored decision and clears the contradiction's
+  `committedResolution`, so the 85k vs 90k gate fires again for the next judge.
+  It is limited to 3 resets per minute per IP.
 
 ---
 

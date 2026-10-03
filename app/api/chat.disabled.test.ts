@@ -10,14 +10,39 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // The chat route imports the Sanity client at module load; mock it so importing
 // the route needs no live Sanity. On the disabled path neither client is used.
+// The write client is swapped per test: the disabled path must never reach it,
+// and the enabled (bedrock) path gets a fake usage-counter client for the
+// daily cap (lib/agentBudget.ts).
+const writeClientFactory = vi.fn((): unknown => {
+  throw new Error("write client must NOT be used on the disabled path");
+});
 vi.mock("@/lib/sanityClient", () => ({
   getReadClient: () => {
     throw new Error("read client must NOT be used on the disabled path");
   },
-  getWriteClient: () => {
-    throw new Error("write client must NOT be used on the disabled path");
-  },
+  getWriteClient: () => writeClientFactory(),
 }));
+
+/** A minimal usage-counter client: every commit bumps an in-memory count. */
+function fakeUsageClient() {
+  let count = 0;
+  const tx = {
+    createIfNotExists: () => tx,
+    patch: () => tx,
+    commit: async () => {
+      count += 1;
+      return {};
+    },
+  };
+  return {
+    transaction: () => tx,
+    getDocument: async () => (count === 0 ? undefined : { count }),
+  };
+}
+
+const ONE_MESSAGE = {
+  messages: [{ id: "1", role: "user", parts: [{ type: "text", text: "SFO to NRT business" }] }],
+};
 
 // Context MCP must not be touched on the disabled path either (the KB outline
 // is fetched only AFTER the model-key check).
@@ -56,7 +81,14 @@ function jsonRequest(body: unknown): Request {
   });
 }
 
-const ENV_KEYS = ["MODEL_PROVIDER_API_KEY", "MODEL_PROVIDER", "MODEL_NAME"] as const;
+const ENV_KEYS = [
+  "MODEL_PROVIDER_API_KEY",
+  "MODEL_PROVIDER",
+  "MODEL_NAME",
+  "AGENT_ENABLED",
+  "AGENT_DAILY_CAP",
+  "AGENT_RATE_PER_HOUR",
+] as const;
 const prevEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
 
 function restoreEnv(): void {
@@ -134,6 +166,7 @@ describe("chat route — MODEL_PROVIDER=bedrock (no API key needed)", () => {
     delete process.env.SANITY_CONTEXT_TOKEN;
     delete process.env.SANITY_KB_ID;
     process.env.MODEL_PROVIDER = "bedrock";
+    writeClientFactory.mockImplementation(() => fakeUsageClient());
     streamText.mockClear();
     createAmazonBedrock.mockClear();
     bedrockModel.mockClear();
@@ -142,7 +175,7 @@ describe("chat route — MODEL_PROVIDER=bedrock (no API key needed)", () => {
   afterEach(restoreEnv);
 
   it("is NOT disabled without MODEL_PROVIDER_API_KEY and streams via the Nova Pro default", async () => {
-    const res = await chatPOST(jsonRequest({ messages: [] }));
+    const res = await chatPOST(jsonRequest(ONE_MESSAGE));
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type") ?? "").not.toContain("application/json");
     expect(await res.text()).toBe("stream");
@@ -152,7 +185,7 @@ describe("chat route — MODEL_PROVIDER=bedrock (no API key needed)", () => {
   });
 
   it("wires the Nova hardening: thinking-strip transform + model-facing traverse output", async () => {
-    await chatPOST(jsonRequest({ messages: [] }));
+    await chatPOST(jsonRequest(ONE_MESSAGE));
     const opts = (streamText.mock.calls[0] as unknown as [Record<string, unknown>])[0];
     expect(typeof opts.experimental_transform).toBe("function");
     const tools = opts.tools as Record<string, { toModelOutput?: unknown }>;
@@ -161,7 +194,7 @@ describe("chat route — MODEL_PROVIDER=bedrock (no API key needed)", () => {
 
   it("honors MODEL_NAME for the Bedrock model id", async () => {
     process.env.MODEL_NAME = "us.amazon.nova-lite-v1:0";
-    await chatPOST(jsonRequest({ messages: [] }));
+    await chatPOST(jsonRequest(ONE_MESSAGE));
     expect(bedrockModel).toHaveBeenCalledWith("us.amazon.nova-lite-v1:0");
   });
 });

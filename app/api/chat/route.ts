@@ -102,6 +102,18 @@ import {
   type PriorUserDecision,
 } from "@/lib/resolution";
 import type { TraverseRow } from "@/lib/fixtures/sfo-nrt-business.rows";
+import {
+  DEFAULT_AGENT_DAILY_CAP,
+  consumeAgentRun,
+  peekAgentBudget,
+  type BudgetDecision,
+} from "@/lib/agentBudget";
+import {
+  clientIp,
+  createRateLimiter,
+  intFromEnv,
+  type RateLimiter,
+} from "@/lib/rateLimit";
 
 // Allow streaming responses up to 30s.
 export const maxDuration = 30;
@@ -111,8 +123,104 @@ const CABIN_VALUES = ["economy", "premium", "business", "first"] as const;
 // Max tool-call steps the agent may chain in one turn (v7 translation of the
 // design's §8.2 `maxSteps`). traverse -> readContradictions -> resolve ->
 // runSolver is four tool calls, plus one optional readKnowledgeBase; the
-// budget leaves room for a re-run after a resolution plus narration turns.
-const MAX_AGENT_STEPS = 10;
+// budget leaves room for one retry plus the narration turn.
+const MAX_AGENT_STEPS = 8;
+
+// --- Cost guard (public demo) -----------------------------------------------
+//
+// Every agent question bills the model provider. Before ANY model call:
+//   1. AGENT_ENABLED=false               -> disabled_by_operator
+//   2. request size caps                 -> 400 typed error
+//   3. per-IP hourly limit (in-memory)   -> rate_limited
+//   4. global daily cap (Sanity counter) -> daily_cap (fails closed)
+// Each limit returns the same typed disabled payload as "no model provider",
+// so the /agent page renders one graceful card for all of them.
+
+/** Per-step output token ceiling. */
+const MAX_OUTPUT_TOKENS = 1200;
+/** Max UI messages per request (about six question/answer turns). */
+const MAX_MESSAGES = 12;
+/** Max characters of text in any single user message. */
+const MAX_USER_TEXT_CHARS = 2000;
+/** Raw body ceiling. History carries tool outputs, so this is generous. */
+const MAX_BODY_CHARS = 400_000;
+
+const SOLVER_PATH = "/solver";
+
+type DisabledReason =
+  | "no model provider configured"
+  | "disabled_by_operator"
+  | "daily_cap"
+  | "rate_limited";
+
+function disabledResponse(reason: DisabledReason, message: string): Response {
+  return Response.json(
+    { disabled: true, reason, message, solverPath: SOLVER_PATH },
+    { status: 200 },
+  );
+}
+
+type RequestErrorCode = "invalid_json" | "too_many_messages" | "message_too_long" | "body_too_large";
+
+function requestError(error: RequestErrorCode, message: string): Response {
+  return Response.json({ error, message }, { status: 400 });
+}
+
+function agentEnabled(): boolean {
+  return (process.env.AGENT_ENABLED ?? "").trim().toLowerCase() !== "false";
+}
+
+function rateLimitPerHour(): number {
+  return intFromEnv(process.env.AGENT_RATE_PER_HOUR, 5);
+}
+
+function dailyCap(): number {
+  return intFromEnv(process.env.AGENT_DAILY_CAP, DEFAULT_AGENT_DAILY_CAP);
+}
+
+// One limiter per instance; rebuilt if AGENT_RATE_PER_HOUR changes (tests).
+let agentLimiter: { limit: number; limiter: RateLimiter } | null = null;
+function getAgentLimiter(): RateLimiter {
+  const limit = rateLimitPerHour();
+  if (!agentLimiter || agentLimiter.limit !== limit) {
+    agentLimiter = {
+      limit,
+      limiter: createRateLimiter({ limit, windowMs: 60 * 60 * 1000, maxKeys: 5000 }),
+    };
+  }
+  return agentLimiter.limiter;
+}
+
+const MSG_OPERATOR =
+  "The agent demo is switched off by the operator right now. The model-free /solver page runs the same pipeline for free and returns the same answer.";
+const MSG_DAILY_CAP =
+  "Today's agent demo budget is used up. The model-free /solver page runs the same pipeline for free and returns the same answer.";
+const MSG_COUNTER_DOWN =
+  "The agent demo can't confirm today's usage budget right now, so it is paused to avoid unmetered model spend. The model-free /solver page runs the same pipeline for free.";
+function msgRateLimited(limit: number): string {
+  return `You've reached the agent demo limit of ${limit} question${limit === 1 ? "" : "s"} per hour from this connection. Try again later, or use the model-free /solver page, which runs the same pipeline for free.`;
+}
+
+function budgetRejection(decision: BudgetDecision): Response | null {
+  if (decision.ok) return null;
+  return disabledResponse(
+    "daily_cap",
+    decision.reason === "daily_cap" ? MSG_DAILY_CAP : MSG_COUNTER_DOWN,
+  );
+}
+
+/** Total text length of a UI message's text parts. */
+function userTextLength(message: UIMessage): number {
+  const parts = Array.isArray(message.parts) ? message.parts : [];
+  let n = 0;
+  for (const p of parts) {
+    if (p && typeof p === "object" && (p as { type?: unknown }).type === "text") {
+      const t = (p as { text?: unknown }).text;
+      if (typeof t === "string") n += t.length;
+    }
+  }
+  return n;
+}
 
 // The gating-authority copy returned alongside the traversal rows (§8.1a): this
 // GROQ-embedded read is what decides whether a price may be computed.
@@ -494,31 +602,68 @@ async function buildSystemPrompt(cfg: ContextConfig | null): Promise<string> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Operator kill switch: checked before anything else, no model, no Sanity.
+  if (!agentEnabled()) return disabledResponse("disabled_by_operator", MSG_OPERATOR);
+
   const model = getModel();
 
   // NFR-3: no model key -> typed, non-crashing "disabled" response. The caller
   // (agent page) renders this and steers the user to the model-free /solver
   // path, which is fully functional without any key.
   if (!model) {
-    return Response.json(
-      {
-        disabled: true,
-        reason: "no model provider configured",
-        message:
-          "The agent (model) path is disabled because no model provider is configured. Set MODEL_PROVIDER=bedrock (AWS credentials, no API key) or set MODEL_PROVIDER=openai|anthropic with MODEL_PROVIDER_API_KEY. Meanwhile use the model-free /solver path, which needs no model and returns the same answer.",
-        solverPath: "/solver",
-      },
-      { status: 200 },
+    return disabledResponse(
+      "no model provider configured",
+      "The agent (model) path is disabled because no model provider is configured. Set MODEL_PROVIDER=bedrock (AWS credentials, no API key) or set MODEL_PROVIDER=openai|anthropic with MODEL_PROVIDER_API_KEY. Meanwhile use the model-free /solver path, which needs no model and returns the same answer.",
     );
   }
 
+  // Request size caps, before any limit is spent or any model call is made.
+  const raw = await request.text();
+  if (raw.length > MAX_BODY_CHARS) {
+    return requestError("body_too_large", "Request body is too large.");
+  }
   let body: { messages?: UIMessage[] };
   try {
-    body = (await request.json()) as { messages?: UIMessage[] };
+    body = JSON.parse(raw) as { messages?: UIMessage[] };
   } catch {
-    return Response.json({ error: "invalid JSON body" }, { status: 400 });
+    return requestError("invalid_json", "Request body is not valid JSON.");
   }
-  const messages = Array.isArray(body.messages) ? body.messages : [];
+  const messages = Array.isArray(body?.messages) ? body.messages : [];
+  if (messages.length > MAX_MESSAGES) {
+    return requestError(
+      "too_many_messages",
+      `This conversation is too long for the demo (max ${MAX_MESSAGES} messages). Reload the page to start fresh.`,
+    );
+  }
+  if (messages.some((m) => m?.role === "user" && userTextLength(m) > MAX_USER_TEXT_CHARS)) {
+    return requestError(
+      "message_too_long",
+      `Please keep a question under ${MAX_USER_TEXT_CHARS} characters.`,
+    );
+  }
+
+  const ip = clientIp(request);
+  const limiter = getAgentLimiter();
+
+  // The /agent page's up-front probe sends no messages. Answer it WITHOUT a
+  // model call and without spending budget: report whether a send would be
+  // refused right now, else { disabled: false }.
+  if (messages.length === 0) {
+    if (limiter.isLimited(ip)) {
+      return disabledResponse("rate_limited", msgRateLimited(rateLimitPerHour()));
+    }
+    const peek = budgetRejection(await peekAgentBudget(getWriteClient, dailyCap()));
+    if (peek) return peek;
+    return Response.json({ disabled: false }, { status: 200 });
+  }
+
+  // Per-visitor limit first (cheap, in-memory), then the shared daily cap.
+  if (!limiter.check(ip).allowed) {
+    return disabledResponse("rate_limited", msgRateLimited(rateLimitPerHour()));
+  }
+  const budget = budgetRejection(await consumeAgentRun(getWriteClient, dailyCap()));
+  if (budget) return budget;
+
   const cfg = contextConfig();
   const kbEnabled = isKbConfigured(cfg);
   const system = await buildSystemPrompt(cfg);
@@ -532,6 +677,8 @@ export async function POST(request: Request): Promise<Response> {
     system,
     messages: modelMessages,
     tools,
+    // Per-step output ceiling; with the step cap this bounds one run's spend.
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
     // v7 translation of the design's `maxSteps` (context.json).
     stopWhen: stepCountIs(MAX_AGENT_STEPS),
     // Nova writes <thinking>…</thinking> inline and ignores the prompt rule;

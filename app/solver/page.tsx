@@ -41,6 +41,7 @@ import { RoutingResult } from "@/components/RoutingResult";
 import type { ResolutionCardProps } from "@/components/ResolutionCard";
 import { KBEvidencePanel } from "@/components/KBEvidencePanel";
 import type { KbEvidence } from "@/lib/kbEvidence";
+import { ResetDemoButton } from "@/components/ResetDemoButton";
 
 // The currencies a user can hold, mapped to their deterministic seed _ids (§5.1).
 const CURRENCIES: { id: string; code: string; name: string }[] = [
@@ -141,6 +142,17 @@ export default function SolverPage() {
   // previous run's KB fetch is also aborted on resubmit.
   const runIdRef = useRef(0);
   const kbAbortRef = useRef<AbortController | null>(null);
+
+  // "Reset demo": after the gate is reset server-side, drop the current
+  // results (and any in-flight KB read) so the next run starts clean.
+  function clearResults() {
+    runIdRef.current += 1;
+    kbAbortRef.current?.abort();
+    kbAbortRef.current = null;
+    setState(null);
+    setKb(null);
+    setError(null);
+  }
 
   function toggleCurrency(id: string) {
     setHeld((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -460,6 +472,10 @@ export default function SolverPage() {
         {/* Results column — loading / error / empty / result               */}
         {/* ---------------------------------------------------------------- */}
         <section className="min-w-0" aria-live="polite">
+          <div className="mb-[var(--spacing-24)]">
+            <ResetDemoButton onReset={clearResults} disabled={running} />
+          </div>
+
           {running ? <RunningIndicator /> : null}
 
           {error ? (

@@ -18,7 +18,9 @@
  * NFR-3: if MODEL_PROVIDER_API_KEY is absent the /api/chat route returns a typed
  * `{ disabled: true }` payload; we detect that (via a probe) and steer the user
  * to the model-free /solver path, which needs no key. The synthetic banner is
- * in the root layout and stays visible.
+ * in the root layout and stays visible. The same payload (reason daily_cap,
+ * rate_limited or disabled_by_operator) is caught on a mid-session send by the
+ * chat transport's fetch, which swaps the page to the disabled card.
  *
  * PRESENTATION NOTE (FEAT-004): this file was restyled from dark inline styles
  * to the DESIGN.md light theme (Warm Card Surface messages, outlined/ghost
@@ -29,6 +31,7 @@
 
 import { useEffect, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
 import Link from "next/link";
 
@@ -43,6 +46,7 @@ import { KBEvidencePanel, MarkdownText } from "@/components/KBEvidencePanel";
 import type { KbEvidence } from "@/lib/kbEvidence";
 import { agentKbToEvidence, kbToolOutputToEvidence } from "@/lib/kbToolEvidence";
 import { stripThinkingText } from "@/lib/stripThinking";
+import { ResetDemoButton } from "@/components/ResetDemoButton";
 
 // --- Narrow local mirrors of the tool-result shapes (from /api/chat tools) ---
 
@@ -105,6 +109,32 @@ interface MessagePart {
 const SAMPLE_PROMPT =
   "SFO to NRT in business. I hold Amex MR (cur.amex) and Chase UR (cur.chase). Find the cheapest valid routing and prove it.";
 
+/** The typed `{ disabled: true }` payload /api/chat returns instead of a stream. */
+interface DisabledState {
+  disabled: boolean;
+  reason?: string;
+  message?: string;
+}
+
+/** Card heading per disabled reason (no-model and operator share the default). */
+function disabledHeading(reason: string | undefined): string {
+  if (reason === "daily_cap") return "DAILY DEMO BUDGET REACHED";
+  if (reason === "rate_limited") return "HOURLY LIMIT REACHED";
+  return "AGENT PATH DISABLED";
+}
+
+/**
+ * Thrown by the chat transport's fetch when /api/chat answers a send with the
+ * typed disabled JSON (daily cap, rate limit, kill switch) instead of a
+ * stream. The page shows the disabled card, not this error.
+ */
+class AgentUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AgentUnavailableError";
+  }
+}
+
 // --- Type guards for the structural guard ------------------------------------
 
 function isSolveResult(v: unknown): v is SolveResult {
@@ -119,15 +149,39 @@ function hasOutput(part: MessagePart): part is MessagePart & { output: unknown }
 }
 
 export default function AgentPage() {
-  const { messages, sendMessage, status, error } = useChat();
-  const [input, setInput] = useState(SAMPLE_PROMPT);
-
   // NFR-3 probe: ask the chat route up front whether the model path is enabled.
   // The route returns a typed `{ disabled: true }` JSON (not a stream) when the
-  // key is absent. undefined = not yet probed.
-  const [modelDisabled, setModelDisabled] = useState<
-    { disabled: boolean; message?: string } | undefined
-  >(undefined);
+  // key is absent, the operator switched it off, or the demo cost guard (daily
+  // cap / per-visitor rate limit) would refuse a send. undefined = not yet probed.
+  const [modelDisabled, setModelDisabled] = useState<DisabledState | undefined>(undefined);
+
+  // A send can also be refused mid-session (cap or rate limit hit after the
+  // probe). Then /api/chat answers with JSON, not a stream: intercept it here,
+  // switch the page to the disabled card, and fail the request quietly instead
+  // of letting the stream parser choke on a JSON body.
+  const [transport] = useState(
+    () =>
+      new DefaultChatTransport<UIMessage>({
+        api: "/api/chat",
+        fetch: async (input, init) => {
+          const res = await fetch(input, init);
+          const ct = res.headers.get("content-type") ?? "";
+          if (!ct.includes("application/json")) return res;
+          const data = (await res.json().catch(() => null)) as
+            | { disabled?: boolean; reason?: string; message?: string; error?: string }
+            | null;
+          if (data?.disabled) {
+            setModelDisabled({ disabled: true, reason: data.reason, message: data.message });
+            throw new AgentUnavailableError(data.message ?? "The agent path is unavailable.");
+          }
+          throw new Error(
+            data?.message ?? data?.error ?? `The agent request failed (${res.status}).`,
+          );
+        },
+      }),
+  );
+  const { messages, sendMessage, status, error } = useChat({ transport });
+  const [input, setInput] = useState(SAMPLE_PROMPT);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,9 +194,9 @@ export default function AgentPage() {
         });
         const ct = res.headers.get("content-type") ?? "";
         if (ct.includes("application/json")) {
-          const data = (await res.json()) as { disabled?: boolean; message?: string };
+          const data = (await res.json()) as DisabledState;
           if (!cancelled && data.disabled) {
-            setModelDisabled({ disabled: true, message: data.message });
+            setModelDisabled({ disabled: true, reason: data.reason, message: data.message });
             return;
           }
         }
@@ -189,7 +243,7 @@ export default function AgentPage() {
           className="mt-[var(--spacing-40)] max-w-[60ch] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
         >
           <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
-            AGENT PATH DISABLED
+            {disabledHeading(modelDisabled.reason)}
           </p>
           <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
             {modelDisabled.message ??
@@ -227,7 +281,7 @@ export default function AgentPage() {
         </button>
       </form>
 
-      {error ? (
+      {error && !modelDisabled?.disabled && error.name !== "AgentUnavailableError" ? (
         <p
           role="alert"
           className="mt-[var(--spacing-24)] max-w-[60ch] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-sunset-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-peach-glow)_55%,var(--color-parchment-cream))] p-[var(--spacing-32)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
@@ -235,6 +289,10 @@ export default function AgentPage() {
           {error.message}
         </p>
       ) : null}
+
+      <div className="mt-[var(--spacing-24)]">
+        <ResetDemoButton />
+      </div>
 
       <div className="mt-[var(--spacing-40)] flex flex-col gap-[var(--spacing-24)]">
         {messages.map((message: UIMessage) => (

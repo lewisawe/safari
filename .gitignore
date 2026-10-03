@@ -1,7 +1,15 @@
 node_modules
 .next
-.env.local
 out
+
+# env files: secrets never go in git (.env.example stays tracked)
+.env.local
+.env*.local
+.env.production
+.env.production.*
+
+# Vercel CLI link + build output
+.vercel
 
 # build / tooling
 *.tsbuildinfo
