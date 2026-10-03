@@ -15,3 +15,8 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# private: idea, draft writeup, agent planning artifacts (kept locally, never published)
+IDEA.md
+WRITEUP.md
+.agents/

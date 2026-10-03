@@ -12,8 +12,6 @@ Knowledge-Base contradiction between disagreeing award-chart sources.
   typed output; absence renders as `NOT_COMPUTED`, never a guessed number.
 - **The data is synthetic** and labeled as such throughout.
 
-The draft dev.to submission is in [`WRITEUP.md`](./WRITEUP.md).
-
 ---
 
 ## Prerequisites
@@ -315,5 +313,3 @@ parent/
     sanity.config.ts projectId 62hh3v9t, dataset production
 ```
 
-See [`.agents/tasks/design.md`](./.agents/tasks/design.md) for the full design
-and [`IDEA.md`](./IDEA.md) for the pitch.
