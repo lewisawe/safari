@@ -19,6 +19,13 @@ vi.mock("@/lib/sanityClient", () => ({
   },
 }));
 
+// Context MCP must not be touched on the disabled path either (the KB outline
+// is fetched only AFTER the model-key check).
+const createMCPClient = vi.fn(() => {
+  throw new Error("Context MCP must NOT be used on the disabled path");
+});
+vi.mock("@ai-sdk/mcp", () => ({ createMCPClient: () => createMCPClient() }));
+
 import { POST as chatPOST } from "./chat/route";
 
 function jsonRequest(body: unknown): Request {
@@ -75,5 +82,21 @@ describe("chat route — NFR-3 disabled path (no model key)", () => {
     expect(res.status).toBe(200);
     const payload = (await res.json()) as Record<string, unknown>;
     expect(payload.disabled).toBe(true);
+  });
+
+  it("stays disabled and never opens a Context MCP client even when Context + KB are configured", async () => {
+    process.env.SANITY_CONTEXT_MCP_URL = "https://api.sanity.io/context/mcp/ep1";
+    process.env.SANITY_CONTEXT_TOKEN = "tok";
+    process.env.SANITY_KB_ID = "kbSafari";
+    try {
+      const res = await chatPOST(jsonRequest({ messages: [] }));
+      const payload = (await res.json()) as Record<string, unknown>;
+      expect(payload.disabled).toBe(true);
+      expect(createMCPClient).not.toHaveBeenCalled();
+    } finally {
+      delete process.env.SANITY_CONTEXT_MCP_URL;
+      delete process.env.SANITY_CONTEXT_TOKEN;
+      delete process.env.SANITY_KB_ID;
+    }
   });
 });

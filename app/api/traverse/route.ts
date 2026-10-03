@@ -1,13 +1,17 @@
 // app/api/traverse/route.ts
 //
 // POST { currencyIds, origin, destination, cabin } -> runs the §6 GROQ
-// traversal against the read client and returns the raw candidate rows (the §6
-// shape). This is the GROQ-traversal Context concern (FR-2), distinct from the
+// traversal and returns the raw candidate rows (the §6 shape). When Sanity
+// Context is configured the SAME fixed query runs through the Context MCP
+// `groq_query` tool (lib/traverse.ts); otherwise, or if Context fails, it runs
+// through @sanity/client. The response adds two additive keys, `via` and
+// `executedQuery`; `rows`, `query`, `params` and the 400/500 shapes are
+// unchanged. This is the GROQ-traversal Context concern (FR-2), distinct from the
 // Knowledge-Base read (§8.1a). The embedded contradictions on each row are the
 // gating authority consumed downstream by toCandidates/solve.
 
 import { NextResponse } from "next/server";
-import { getReadClient } from "@/lib/sanityClient";
+import { runTraversal } from "@/lib/traverse";
 import {
   TRAVERSE_ROUTINGS_QUERY,
   buildTraverseParams,
@@ -55,11 +59,17 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const client = getReadClient();
     const params = buildTraverseParams(parsed);
-    const rows = await client.fetch(TRAVERSE_ROUTINGS_QUERY, params);
-    // Return the raw §6 rows plus the exact query issued (FR-8: show the work).
-    return NextResponse.json({ rows, query: TRAVERSE_ROUTINGS_QUERY, params });
+    const { rows, via, executedQuery } = await runTraversal(params);
+    // Return the raw §6 rows plus the exact query issued (FR-8: show the work),
+    // and which read path served them.
+    return NextResponse.json({
+      rows,
+      query: TRAVERSE_ROUTINGS_QUERY,
+      params,
+      via,
+      executedQuery,
+    });
   } catch (err) {
     // A read/config failure is a server error; never fabricate rows.
     const message = err instanceof Error ? err.message : "traversal failed";

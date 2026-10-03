@@ -11,10 +11,12 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "check-context": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/check-context.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4",
+    "@ai-sdk/mcp": "2.0.66",
     "@ai-sdk/openai": "^4",
     "@ai-sdk/react": "^4",
     "@sanity/client": "^8.9",
