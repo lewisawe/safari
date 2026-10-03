@@ -22,9 +22,15 @@ export function QueryTrace({
       <h3 className="m-0 mb-2 text-[0.95rem] font-medium tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]">
         GROQ traversal issued
       </h3>
-      <pre className="m-0 overflow-x-auto whitespace-pre rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_15%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-16)] text-[0.78rem] leading-[1.5] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
-        <code>{query}</code>
-      </pre>
+      <details className="group rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_15%,transparent)] bg-[var(--color-parchment-cream)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
+        <summary className="cursor-pointer select-none px-[var(--spacing-16)] py-3 text-[0.85rem] font-medium text-[var(--color-outlined-action)]">
+          <span className="group-open:hidden">Show the full query (one bounded, four-hop traversal)</span>
+          <span className="hidden group-open:inline">Hide query</span>
+        </summary>
+        <pre className="m-0 overflow-x-auto whitespace-pre border-t border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] p-[var(--spacing-16)] text-[0.78rem] leading-[1.5] text-[var(--color-carbon-ink)]">
+          <code>{query}</code>
+        </pre>
+      </details>
       {params ? (
         <>
           <h4 className="mt-3 mb-2 text-[0.82rem] font-medium tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_70%,transparent)]">

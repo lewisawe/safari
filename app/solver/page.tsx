@@ -69,6 +69,14 @@ interface NotComputedResolvePayload {
 
 type ResolveResponse = ResolvedPayload | NotComputedResolvePayload;
 
+/** committedResolution as projected by the §6 traversal (when already resolved). */
+interface CommittedResolutionRow {
+  chosenClaim: "A" | "B";
+  chosenPointsCost: number;
+  rationale: string;
+  chosenSource?: { _id: string; title?: string; authority?: string } | null;
+}
+
 // §6 traversal row shape is defined in the fixture; we treat it opaquely here
 // and hand it straight back to /api/solve, so a loose unknown[] suffices.
 interface TraverseResponse {
@@ -220,12 +228,21 @@ export default function SolverPage() {
           };
           setState({ ...next });
 
-          // 5) Re-run solve now that the contradiction carries a resolution.
+          // 5) Re-traverse so the rows carry the committedResolution that
+          //    /api/resolve just wrote (§9.1: resolve write + re-traverse),
+          //    then re-run solve on those fresh rows. Re-solving the STALE
+          //    pre-resolution rows would just re-fire the gate.
+          const retraverse = await postJson<TraverseResponse>("/api/traverse", {
+            currencyIds,
+            origin,
+            destination,
+            cabin,
+          });
           const finalResult = await postJson<SolveResult>("/api/solve", {
             origin,
             destination,
             cabin,
-            rows: traverse.rows,
+            rows: retraverse.rows,
           });
           next.finalResult = finalResult;
           setState({ ...next });
@@ -241,6 +258,36 @@ export default function SolverPage() {
         }
       } else {
         // No gate (or NO_VALID_ROUTING): the gated result is the final result.
+        // If the contradiction was already resolved on an earlier run, surface
+        // that committed resolution (read straight from the traversal rows) so
+        // the "decision carried forward" beat is visible instead of silently
+        // skipping from the contradiction to the proof. Presentation only.
+        const committed = traverse.rows
+          .flatMap(
+            (row) =>
+              (row as { chartEntries?: { contradictions?: unknown[] }[] })
+                .chartEntries ?? [],
+          )
+          .flatMap((en) => en.contradictions ?? [])
+          .map(
+            (c) =>
+              (c as { committedResolution?: CommittedResolutionRow | null })
+                .committedResolution,
+          )
+          .find((r): r is CommittedResolutionRow => Boolean(r));
+        if (committed) {
+          next.resolution = {
+            chosenClaim: committed.chosenClaim,
+            chosenPointsCost: committed.chosenPointsCost,
+            rationale: committed.rationale,
+            chosenSource: {
+              _id: committed.chosenSource?._id ?? "unknown",
+              title: committed.chosenSource?.title,
+              authority: committed.chosenSource?.authority,
+            },
+            carriedForward: true,
+          };
+        }
         next.finalResult = gated;
         setState({ ...next });
       }
@@ -267,13 +314,15 @@ export default function SolverPage() {
         </p>
       </header>
 
-      <div className="mt-[var(--spacing-40)] grid grid-cols-1 gap-[var(--spacing-40)] lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <div className="mt-[var(--spacing-40)] grid grid-cols-1 gap-[var(--spacing-40)]">
+        {/* Form on top, results full-width below: the proof table and GROQ
+            trace need the full 1200px column to show every column legibly. */}
         {/* ---------------------------------------------------------------- */}
         {/* Trip-request form — Warm Card Surface                            */}
         {/* ---------------------------------------------------------------- */}
         <form
           onSubmit={runPipeline}
-          className="grid h-max gap-[var(--spacing-24)] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
+          className="grid h-max max-w-[720px] gap-[var(--spacing-24)] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
         >
           <div className="grid grid-cols-1 gap-[var(--spacing-16)] sm:grid-cols-2">
             <label className="flex flex-col gap-[var(--spacing-8)]">

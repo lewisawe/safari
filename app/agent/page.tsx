@@ -181,8 +181,8 @@ export default function AgentPage() {
             AGENT PATH DISABLED
           </p>
           <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
-            {modelDisabled.message ?? "MODEL_PROVIDER_API_KEY is not set."} The
-            model-free solver path needs no API key and returns the same answer.
+            {modelDisabled.message ??
+              "MODEL_PROVIDER_API_KEY is not set. The model-free solver path needs no API key and returns the same answer."}
           </p>
           <Link
             href="/solver"

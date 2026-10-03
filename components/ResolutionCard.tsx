@@ -11,6 +11,11 @@ export interface ResolutionCardProps {
   rationale: string;
   /** Cited source for the chosen claim (id always; title/authority if known). */
   chosenSource: { _id: string; title?: string; authority?: string };
+  /**
+   * True when this resolution was committed on an EARLIER run and read back
+   * from the traversal (the decision carried forward), rather than made now.
+   */
+  carriedForward?: boolean;
 }
 
 export function ResolutionCard({
@@ -18,6 +23,7 @@ export function ResolutionCard({
   chosenPointsCost,
   rationale,
   chosenSource,
+  carriedForward = false,
 }: ResolutionCardProps) {
   return (
     <section
@@ -26,7 +32,7 @@ export function ResolutionCard({
     >
       <div className="flex flex-wrap items-baseline gap-[var(--spacing-8)]">
         <span className="rounded-[var(--radius-lg)] border border-[var(--color-outlined-action)] px-2 py-[0.1rem] text-[0.72rem] font-medium tracking-[0.04em] text-[var(--color-outlined-action)]">
-          RESOLVED
+          {carriedForward ? "RESOLVED EARLIER · DECISION CARRIED FORWARD" : "RESOLVED"}
         </span>
         <span className="text-[var(--color-carbon-ink)]">
           Chose claim <strong>{chosenClaim}</strong> —{" "}
