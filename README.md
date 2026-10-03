@@ -176,8 +176,12 @@ shows a cited Knowledge Base panel.
 
 1. In **Manage → Labs**, enable **Context** and **Knowledge Bases** for the org.
 2. Create an **organization token** with the **Context Viewer** role.
-3. Deploy the schema and seed: `npx sanity schema deploy` in `studio-safari`,
-   then `npm run seed` here. Each `source` now carries a synthetic `excerpt`.
+3. Deploy the schema **and the Studio**, then seed: in `studio-safari` run
+   `npx sanity schema deploy`, and either `npx sanity deploy` or register the
+   Studio as an external app (`deployment.appId` in `sanity.cli.ts`). Context
+   only serves datasets with a deployed Studio v5.1.0+; otherwise every call
+   fails with -32004. Then `npm run seed` here. Each `source` now carries a synthetic
+   `excerpt`.
 4. In Dashboard → Context, create a **Knowledge Base** from dataset
    `62hh3v9t/production` and build it. It should flag an Issue: ANA SFO→NRT
    business 85,000 (printed chart) vs 90,000 (devaluation notice). Resolve it by
@@ -193,7 +197,11 @@ shows a cited Knowledge Base panel.
 
 What the `via` markers mean (QueryTrace on `/solver`, tool output on `/agent`):
 
-- `context-mcp`: rows came from Context MCP `groq_query` running the same fixed query.
+- `context-mcp`: rows came from Context MCP `groq_query` running the same fixed
+  query. Context doesn't accept `$params`, so the app checks each value against
+  a strict allowlist (currency ids `^[a-z0-9._-]+$`, IATA `^[A-Z]{3}$`, a known
+  cabin) and inlines it as a JSON literal. A value that fails the allowlist is
+  never sent to Context; the parameterized local query serves it instead.
 - `sanity-client (Context not configured)`: the Context vars are absent.
 - `sanity-client (Context MCP failed: <kind>)`: Context was configured but the
   read failed (auth, transport, tool error, truncation); the same query ran
@@ -204,10 +212,10 @@ The gate and prices don't depend on Context. The gate is the GROQ-embedded
 `resolve` stays a local write because Context is read-only. Knowledge Base
 content is evidence only.
 
-Read-after-write freshness through Context is unverified. `/solver` re-traverses
-right after `/api/resolve` writes. If Context serves a stale read, the re-run
-stays gated (NOT_COMPUTED, never a wrong price). Run `npm run check-context`
-before and after a resolve to compare the contradiction status.
+Read-after-write through Context was checked live: the re-traverse right after
+`/api/resolve` saw the new `committedResolution`. If Context ever serves a stale
+read, the re-run stays gated (NOT_COMPUTED, never a wrong price). Run
+`npm run check-context` before and after a resolve to compare the status.
 
 ---
 
