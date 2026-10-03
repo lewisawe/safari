@@ -254,13 +254,13 @@ export default function SolverPage() {
   return (
     <main className="mx-auto w-full max-w-[1200px] px-[var(--spacing-24)] pb-[var(--spacing-80)] pt-[var(--spacing-56)] font-[family-name:var(--font-jobytext)] text-[var(--color-carbon-ink)] sm:px-[var(--spacing-40)]">
       <header className="max-w-[60ch]">
-        <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+        <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
           TRIP REQUEST · MODEL-FREE
         </p>
         <h1 className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[clamp(40px,6vw,64px)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
           Construct the cheapest routing
         </h1>
-        <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
+        <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
           Runs the exact traversal → Knowledge-Base read → resolution →
           deterministic solver pipeline with no model in the loop (FR-9). Needs
           no API key.
@@ -320,7 +320,7 @@ export default function SolverPage() {
               {CURRENCIES.map((c) => (
                 <label
                   key={c.id}
-                  className="flex items-center gap-[var(--spacing-8)] text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]"
+                  className="flex items-center gap-[var(--spacing-8)] text-[length:var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]"
                 >
                   <input
                     type="checkbox"
@@ -341,7 +341,7 @@ export default function SolverPage() {
             <button
               type="submit"
               disabled={running}
-              className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] transition-opacity disabled:cursor-default disabled:opacity-55"
+              className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] transition-opacity disabled:cursor-default disabled:opacity-55"
             >
               {running ? "Running pipeline…" : "Construct cheapest routing"}
             </button>
@@ -357,7 +357,7 @@ export default function SolverPage() {
           {error ? (
             <p
               role="alert"
-              className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-sunset-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-peach-glow)_55%,var(--color-parchment-cream))] p-[var(--spacing-32)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
+              className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-sunset-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-peach-glow)_55%,var(--color-parchment-cream))] p-[var(--spacing-32)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
             >
               {error}
             </p>
@@ -397,10 +397,10 @@ export default function SolverPage() {
 function RunningIndicator() {
   return (
     <div className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
-      <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+      <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
         RUNNING PIPELINE
       </p>
-      <p className="mt-[var(--spacing-16)] inline-flex items-center gap-[var(--spacing-8)] font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
+      <p className="mt-[var(--spacing-16)] inline-flex items-center gap-[var(--spacing-8)] font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
         Constructing the proof
         <span aria-hidden="true" className="inline-flex gap-[6px]">
           <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-[var(--color-electric-blue)] [animation-delay:0ms]" />
@@ -408,7 +408,7 @@ function RunningIndicator() {
           <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-[var(--color-electric-blue)] [animation-delay:400ms]" />
         </span>
       </p>
-      <ol className="mt-[var(--spacing-24)] flex flex-col gap-[var(--spacing-8)] text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_65%,transparent)]">
+      <ol className="mt-[var(--spacing-24)] flex flex-col gap-[var(--spacing-8)] text-[length:var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_65%,transparent)]">
         <li>Traversing the typed routing graph…</li>
         <li>Reading the Knowledge Base for contradictions…</li>
         <li>Gating, resolving, and pricing deterministically…</li>
@@ -424,10 +424,10 @@ function RunningIndicator() {
 function EmptyState() {
   return (
     <div className="max-w-[48ch] border-l-[3px] border-[var(--color-outlined-action)] pl-[var(--spacing-24)]">
-      <h2 className="font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
+      <h2 className="font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
         No routing constructed yet
       </h2>
-      <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
+      <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
         Pick an origin, destination, cabin, and the points currencies you hold,
         then construct the routing. You&rsquo;ll see the exact GROQ traversal,
         the Knowledge-Base contradiction, how it&rsquo;s resolved, and the
@@ -438,7 +438,7 @@ function EmptyState() {
 }
 
 const LABEL_CLASS =
-  "font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium uppercase tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_70%,transparent)]";
+  "font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium uppercase tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_70%,transparent)]";
 
 const INPUT_CLASS =
-  "rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] px-[var(--spacing-16)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-outlined-action)]";
+  "rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] px-[var(--spacing-16)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-outlined-action)]";

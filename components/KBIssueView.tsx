@@ -33,7 +33,7 @@ function ClaimColumn({ label, claim }: { label: string; claim: ClaimProjection }
       <div className="mt-[var(--spacing-8)] text-[0.9rem] font-medium tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_75%,transparent)]">
         points
       </div>
-      <div className="mt-[var(--spacing-16)] text-[var(--text-body)] text-[var(--color-carbon-ink)]">
+      <div className="mt-[var(--spacing-16)] text-[length:var(--text-body)] text-[var(--color-carbon-ink)]">
         {claim.label}
       </div>
       <dl className="m-0 mt-[var(--spacing-24)] text-[0.82rem] leading-[1.5]">
@@ -84,7 +84,7 @@ export function KBIssueView({
         Knowledge Base contradiction
       </h3>
       {/* Heaviest result component: display-scale headline carries the disagreement. */}
-      <p className="m-0 mb-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
+      <p className="m-0 mb-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
         {title}
       </p>
       {explanation ? (
@@ -100,7 +100,7 @@ export function KBIssueView({
         {/* Disagreement affordance: a centered 'vs' between the two claims. */}
         <div
           aria-hidden="true"
-          className="flex shrink-0 items-center justify-center self-center font-[family-name:var(--font-jobydisplay)] text-[var(--text-heading-sm)] font-medium leading-[1] tracking-[var(--tracking-heading-sm)] text-[var(--color-electric-blue)]"
+          className="flex shrink-0 items-center justify-center self-center font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-heading-sm)] font-medium leading-[1] tracking-[var(--tracking-heading-sm)] text-[var(--color-electric-blue)]"
         >
           vs
         </div>

@@ -18,7 +18,7 @@ export function SyntheticBanner() {
     <div
       role="note"
       aria-label="Synthetic dataset notice"
-      className="w-full bg-[var(--color-deep-cobalt)] px-[var(--spacing-16)] py-[var(--spacing-8)] text-center font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[-0.01em] text-[var(--color-parchment-cream)]"
+      className="w-full bg-[var(--color-deep-cobalt)] px-[var(--spacing-16)] py-[var(--spacing-8)] text-center font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[-0.01em] text-[var(--color-parchment-cream)]"
     >
       Synthetic dataset — not real award pricing
     </div>

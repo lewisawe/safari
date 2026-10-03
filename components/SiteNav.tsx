@@ -15,13 +15,13 @@ export function SiteNav() {
       <Link
         href="/"
         aria-label="Safari home"
-        className="font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)] no-underline"
+        className="font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-subheading)] font-medium tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)] no-underline"
       >
         Safari
       </Link>
       <Link
         href="/solver"
-        className="absolute right-[var(--spacing-24)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)]"
+        className="absolute right-[var(--spacing-24)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)]"
       >
         Solver ↗
       </Link>

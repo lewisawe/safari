@@ -158,13 +158,13 @@ export default function AgentPage() {
   return (
     <main className="mx-auto w-full max-w-[1200px] px-[var(--spacing-24)] pb-[var(--spacing-80)] pt-[var(--spacing-56)] font-[family-name:var(--font-jobytext)] text-[var(--color-carbon-ink)] sm:px-[var(--spacing-40)]">
       <header className="max-w-[60ch]">
-        <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+        <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
           AGENT PATH · SHOWS ITS WORK
         </p>
         <h1 className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[clamp(40px,6vw,64px)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
           Agent path
         </h1>
-        <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
+        <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
           The model chains four Sanity Context tools (GROQ traversal,
           Knowledge-Base read, resolve, solver) and shows its work. Prices come
           only from the <code>runSolver</code> tool result — free text is
@@ -177,16 +177,16 @@ export default function AgentPage() {
           role="status"
           className="mt-[var(--spacing-40)] max-w-[60ch] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
         >
-          <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+          <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
             AGENT PATH DISABLED
           </p>
-          <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
+          <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
             {modelDisabled.message ?? "MODEL_PROVIDER_API_KEY is not set."} The
             model-free solver path needs no API key and returns the same answer.
           </p>
           <Link
             href="/solver"
-            className="mt-[var(--spacing-24)] inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] no-underline"
+            className="mt-[var(--spacing-24)] inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] no-underline"
           >
             Use the model-free solver path →
           </Link>
@@ -203,14 +203,14 @@ export default function AgentPage() {
           rows={3}
           aria-label="Message to the agent"
           placeholder="Describe your trip and the point currencies you hold…"
-          className="flex-1 resize-y rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] p-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-outlined-action)] disabled:opacity-55"
+          className="flex-1 resize-y rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] p-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-outlined-action)] disabled:opacity-55"
           disabled={Boolean(modelDisabled?.disabled)}
         />
         {/* Outlined Action (ghost pill) — never a filled rectangle */}
         <button
           type="submit"
           disabled={busy || Boolean(modelDisabled?.disabled)}
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] transition-opacity disabled:cursor-default disabled:opacity-55"
+          className="inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] transition-opacity disabled:cursor-default disabled:opacity-55"
         >
           {busy ? "Working…" : "Send"}
         </button>
@@ -219,7 +219,7 @@ export default function AgentPage() {
       {error ? (
         <p
           role="alert"
-          className="mt-[var(--spacing-24)] max-w-[60ch] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-sunset-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-peach-glow)_55%,var(--color-parchment-cream))] p-[var(--spacing-32)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
+          className="mt-[var(--spacing-24)] max-w-[60ch] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-sunset-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-peach-glow)_55%,var(--color-parchment-cream))] p-[var(--spacing-32)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
         >
           {error.message}
         </p>
@@ -247,7 +247,7 @@ function MessageView({ message }: { message: UIMessage }) {
 
   return (
     <article className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-32)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
-      <div className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium uppercase tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+      <div className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium uppercase tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
         {isUser ? "You" : "Safari agent"}
       </div>
       <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-24)]">
@@ -264,7 +264,7 @@ function PartView({ part }: { part: MessagePart }) {
   if (part.type === "text") {
     if (!part.text) return null;
     return (
-      <p className="m-0 whitespace-pre-wrap font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
+      <p className="m-0 whitespace-pre-wrap font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
         {part.text}
       </p>
     );
@@ -280,7 +280,7 @@ function PartView({ part }: { part: MessagePart }) {
         <div className="mt-[var(--spacing-16)]">
           <QueryTrace query={out.query} params={out.params} />
         </div>
-        <p className="mt-[var(--spacing-8)] mb-0 text-[var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+        <p className="mt-[var(--spacing-8)] mb-0 text-[length:var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
           {out.gatingAuthority}
         </p>
       </div>
@@ -294,7 +294,7 @@ function PartView({ part }: { part: MessagePart }) {
       return (
         <div>
           <ToolBadge name="readContradictions" note="Knowledge Base · presentation only" />
-          <p className="mt-[var(--spacing-8)] mb-0 text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+          <p className="mt-[var(--spacing-8)] mb-0 text-[length:var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
             No contradictions on these entries.
           </p>
         </div>
@@ -401,10 +401,10 @@ function ToolBadge({ name, note }: { name: string; note: string }) {
           Electric Blue (#007ae5, 3.84:1) for this 12px label so the tool name
           clears 4.5:1. Still an isolated blue-register outlined chip, matching
           the WINNER/RESOLVED chips. */}
-      <code className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-outlined-action)_55%,transparent)] px-[0.45rem] py-[0.1rem] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+      <code className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-outlined-action)_55%,transparent)] px-[0.45rem] py-[0.1rem] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
         {name}
       </code>
-      <span className="text-[var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+      <span className="text-[length:var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
         {note}
       </span>
     </div>

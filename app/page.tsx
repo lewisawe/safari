@@ -98,7 +98,7 @@ export default function HomePage() {
             Proves the cheapest award‑travel routing. Won&rsquo;t guess when
             sources disagree.
           </h1>
-          <p className="hero-text max-w-[46ch] font-[family-name:var(--font-jobytext)] text-[var(--text-body-lg)] font-medium leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[var(--color-parchment-cream)]">
+          <p className="hero-text max-w-[46ch] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body-lg)] font-medium leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[var(--color-parchment-cream)]">
             An agent that walks a typed Sanity knowledge graph, pauses the
             moment its sources contradict each other, and hands the arithmetic
             to a deterministic solver that shows its proof.
@@ -110,20 +110,20 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center gap-[var(--spacing-16)]">
             <Link
               href="/solver"
-              className="hero-text inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-parchment-cream)] bg-[rgba(14,22,32,0.42)] px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline backdrop-blur-sm"
+              className="hero-text inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-parchment-cream)] bg-[rgba(14,22,32,0.42)] px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline backdrop-blur-sm"
             >
               Model‑free solver →
             </Link>
             <Link
               href="/agent"
-              className="hero-text inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-parchment-cream)] bg-[rgba(14,22,32,0.42)] px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline backdrop-blur-sm"
+              className="hero-text inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-parchment-cream)] bg-[rgba(14,22,32,0.42)] px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-parchment-cream)] no-underline backdrop-blur-sm"
             >
               Agent path →
             </Link>
           </div>
 
           {/* Synthetic-data framing as a bordered caption (not a second bar) */}
-          <p className="hero-text mt-[var(--spacing-8)] max-w-[52ch] border-l-[3px] border-[var(--color-parchment-cream)] pl-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-sm)] font-medium leading-[var(--leading-body-sm)] tracking-[var(--tracking-body-sm)] text-[var(--color-parchment-cream)]">
+          <p className="hero-text mt-[var(--spacing-8)] max-w-[52ch] border-l-[3px] border-[var(--color-parchment-cream)] pl-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body-sm)] font-medium leading-[var(--leading-body-sm)] tracking-[var(--tracking-body-sm)] text-[var(--color-parchment-cream)]">
             Every routing, chart, and contradiction here is a synthetic dataset
             built to exercise the reasoning — not real award pricing. The
             discipline is the point.
@@ -135,7 +135,7 @@ export default function HomePage() {
       {/* How it works — three beats on the cream canvas                    */}
       {/* ---------------------------------------------------------------- */}
       <section className="mx-auto w-full max-w-[1200px] px-[var(--spacing-24)] py-[var(--spacing-80)] sm:px-[var(--spacing-40)]">
-        <h2 className="font-[family-name:var(--font-jobydisplay)] text-[var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
+        <h2 className="font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
           How it works
         </h2>
 
@@ -145,13 +145,13 @@ export default function HomePage() {
               key={beat.step}
               className="rounded-[var(--radius-2xl)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
             >
-              <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+              <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
                 STEP {beat.step}
               </p>
-              <h3 className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
+              <h3 className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
                 {beat.title}
               </h3>
-              <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
+              <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
                 {beat.body}
               </p>
             </article>
@@ -169,10 +169,10 @@ export default function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <section className="mx-auto w-full max-w-[1200px] px-[var(--spacing-24)] py-[var(--spacing-80)] sm:px-[var(--spacing-40)]">
         <div className="max-w-[52ch]">
-          <h2 className="font-[family-name:var(--font-jobydisplay)] text-[var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
+          <h2 className="font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
             The moment it refuses to guess
           </h2>
-          <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
+          <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
             Two sources disagree on the same award. Below is a static preview of
             what the solver surfaces — the live tools render the real thing.
           </p>
@@ -181,32 +181,32 @@ export default function HomePage() {
         {/* Two contradicting claims, side by side (static mock) */}
         <div className="mt-[var(--spacing-40)] grid grid-cols-1 gap-[var(--spacing-24)] md:grid-cols-2">
           <article className="rounded-[var(--radius-2xl)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
-            <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+            <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
               SOURCE A · AWARD CHART
             </p>
-            <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
+            <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
               85,000
             </p>
-            <p className="mt-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]">
+            <p className="mt-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]">
               SFO → NRT business · printed chart
             </p>
           </article>
 
           <article className="rounded-[var(--radius-2xl)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
-            <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+            <p className="font-[family-name:var(--font-joby-sans-display)] text-[length:var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
               SOURCE B · DEVALUATION NOTICE
             </p>
-            <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
+            <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[length:var(--text-heading-sm)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
               90,000
             </p>
-            <p className="mt-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]">
+            <p className="mt-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]">
               SFO → NRT business · updated notice
             </p>
           </article>
         </div>
 
         {/* Outcome caption — bordered block, no box, no guessed price */}
-        <p className="mt-[var(--spacing-24)] max-w-[52ch] border-l-[3px] border-[var(--color-outlined-action)] pl-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
+        <p className="mt-[var(--spacing-24)] max-w-[52ch] border-l-[3px] border-[var(--color-outlined-action)] pl-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
           Pricing pauses here. The agent resolves the conflict against the
           authoritative source before the deterministic solver returns a single
           proven routing — it never averages the two or picks one at random.
@@ -216,13 +216,13 @@ export default function HomePage() {
         <div className="mt-[var(--spacing-40)] flex flex-wrap items-center gap-[var(--spacing-16)]">
           <Link
             href="/solver"
-            className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] no-underline"
+            className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] no-underline"
           >
             Model‑free solver →
           </Link>
           <Link
             href="/agent"
-            className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] no-underline"
+            className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] no-underline"
           >
             Agent path →
           </Link>
