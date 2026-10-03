@@ -22,56 +22,48 @@ function formatDate(iso: string): string {
 
 function ClaimColumn({ label, claim }: { label: string; claim: ClaimProjection }) {
   return (
-    <div
-      style={{
-        flex: "1 1 0",
-        minWidth: 0,
-        border: "1px solid #2a2a30",
-        borderRadius: 8,
-        padding: "1rem",
-        background: "#141416",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "0.72rem",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-          color: "#8a8a90",
-          marginBottom: "0.4rem",
-        }}
-      >
+    <div className="flex min-w-0 flex-[1_1_0] flex-col rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-32)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
+      <div className="mb-[var(--spacing-16)] text-[0.72rem] uppercase tracking-[0.05em] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
         Claim {label}
       </div>
-      <div
-        style={{ fontSize: "1.5rem", fontWeight: 700, color: "#e8e8ea" }}
-      >
+      {/* The disagreeing number — large, display-scale, tabular, medium weight. */}
+      <div className="font-[family-name:var(--font-jobydisplay)] text-[clamp(48px,7vw,80px)] font-medium leading-[1] tracking-[var(--tracking-heading-lg)] text-[var(--color-carbon-ink)] [font-variant-numeric:tabular-nums]">
         {claim.pointsCost.toLocaleString("en-US")}
-        <span style={{ fontSize: "0.9rem", color: "#9a9aa2" }}> points</span>
       </div>
-      <div style={{ marginTop: "0.3rem", color: "#c7c7cd", fontSize: "0.9rem" }}>
+      <div className="mt-[var(--spacing-8)] text-[0.9rem] font-medium tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_75%,transparent)]">
+        points
+      </div>
+      <div className="mt-[var(--spacing-16)] text-[var(--text-body)] text-[var(--color-carbon-ink)]">
         {claim.label}
       </div>
-      <dl style={{ margin: "0.75rem 0 0", fontSize: "0.82rem", lineHeight: 1.5 }}>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <dt style={{ color: "#8a8a90", minWidth: 76 }}>Source</dt>
-          <dd style={{ margin: 0, color: "#d7d7dc" }}>{claim.source.title}</dd>
+      <dl className="m-0 mt-[var(--spacing-24)] text-[0.82rem] leading-[1.5]">
+        <div className="flex gap-2">
+          <dt className="min-w-[76px] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+            Source
+          </dt>
+          <dd className="m-0 text-[var(--color-carbon-ink)]">{claim.source.title}</dd>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <dt style={{ color: "#8a8a90", minWidth: 76 }}>Authority</dt>
-          <dd style={{ margin: 0, color: "#d7d7dc" }}>
+        <div className="flex gap-2">
+          <dt className="min-w-[76px] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+            Authority
+          </dt>
+          <dd className="m-0 text-[var(--color-carbon-ink)]">
             <code>{claim.source.authority}</code>
           </dd>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <dt style={{ color: "#8a8a90", minWidth: 76 }}>Effective</dt>
-          <dd style={{ margin: 0, color: "#d7d7dc" }}>
+        <div className="flex gap-2">
+          <dt className="min-w-[76px] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+            Effective
+          </dt>
+          <dd className="m-0 text-[var(--color-carbon-ink)]">
             {formatDate(claim.effectiveDate)}
           </dd>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <dt style={{ color: "#8a8a90", minWidth: 76 }}>Published</dt>
-          <dd style={{ margin: 0, color: "#d7d7dc" }}>
+        <div className="flex gap-2">
+          <dt className="min-w-[76px] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+            Published
+          </dt>
+          <dd className="m-0 text-[var(--color-carbon-ink)]">
             {formatDate(claim.source.publishedDate)}
           </dd>
         </div>
@@ -88,33 +80,27 @@ export function KBIssueView({
 }: KBIssueViewProps) {
   return (
     <section aria-label="Knowledge Base contradiction">
-      <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.25rem", color: "#cfcfd4" }}>
+      <h3 className="m-0 mb-[var(--spacing-8)] text-[0.72rem] uppercase tracking-[0.05em] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
         Knowledge Base contradiction
       </h3>
-      <p style={{ margin: "0 0 0.75rem", color: "#e8e8ea", fontWeight: 600 }}>
+      {/* Heaviest result component: display-scale headline carries the disagreement. */}
+      <p className="m-0 mb-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
         {title}
       </p>
       {explanation ? (
-        <p
-          style={{
-            margin: "0 0 1rem",
-            color: "#9a9aa2",
-            fontSize: "0.88rem",
-            lineHeight: 1.55,
-          }}
-        >
+        <p className="m-0 mb-[var(--spacing-24)] max-w-[640px] text-[0.88rem] leading-[1.55] text-[color-mix(in_srgb,var(--color-carbon-ink)_70%,transparent)]">
           {explanation}
         </p>
       ) : null}
-      <div
-        style={{
-          display: "flex",
-          gap: "1rem",
-          flexWrap: "wrap",
-          alignItems: "stretch",
-        }}
-      >
+      <div className="flex flex-wrap items-stretch gap-[var(--spacing-16)]">
         <ClaimColumn label="A" claim={claimA} />
+        {/* Disagreement affordance: a centered 'vs' between the two claims. */}
+        <div
+          aria-hidden="true"
+          className="flex shrink-0 items-center justify-center self-center font-[family-name:var(--font-jobydisplay)] text-[var(--text-heading-sm)] font-medium leading-[1] tracking-[var(--tracking-heading-sm)] text-[var(--color-electric-blue)]"
+        >
+          vs
+        </div>
         <ClaimColumn label="B" claim={claimB} />
       </div>
     </section>

@@ -22,62 +22,28 @@ export function ResolutionCard({
   return (
     <section
       aria-label="Contradiction resolution"
-      style={{
-        border: "1px solid #1f4d2a",
-        background: "#0e1a11",
-        borderRadius: 10,
-        padding: "1.25rem 1.5rem",
-      }}
+      className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-32)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: "0.6rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{
-            padding: "0.1rem 0.5rem",
-            borderRadius: 6,
-            background: "#1f4d2a",
-            color: "#9fe6b0",
-            fontSize: "0.72rem",
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-          }}
-        >
+      <div className="flex flex-wrap items-baseline gap-[var(--spacing-8)]">
+        <span className="rounded-[var(--radius-lg)] border border-[var(--color-outlined-action)] px-2 py-[0.1rem] text-[0.72rem] font-medium tracking-[0.04em] text-[var(--color-outlined-action)]">
           RESOLVED
         </span>
-        <span style={{ color: "#cfcfd4" }}>
+        <span className="text-[var(--color-carbon-ink)]">
           Chose claim <strong>{chosenClaim}</strong> —{" "}
-          <strong style={{ color: "#9fe6b0" }}>
+          <strong className="[font-variant-numeric:tabular-nums] text-[var(--color-carbon-ink)]">
             {chosenPointsCost.toLocaleString("en-US")} points
           </strong>
         </span>
       </div>
 
-      <p
-        style={{
-          margin: "0.75rem 0 0",
-          color: "#d7e4d9",
-          lineHeight: 1.55,
-        }}
-      >
+      <p className="mt-[var(--spacing-16)] mb-0 leading-[1.55] text-[var(--color-carbon-ink)]">
         {rationale}
       </p>
 
-      <p
-        style={{
-          margin: "0.75rem 0 0",
-          fontSize: "0.82rem",
-          color: "#8aa891",
-        }}
-      >
+      <p className="mt-[var(--spacing-16)] mb-0 text-[0.82rem] text-[color-mix(in_srgb,var(--color-carbon-ink)_65%,transparent)]">
         Cited source:{" "}
         {chosenSource.title ? (
-          <span style={{ color: "#c7d7ca" }}>{chosenSource.title}</span>
+          <span className="text-[var(--color-carbon-ink)]">{chosenSource.title}</span>
         ) : null}{" "}
         <code>{chosenSource._id}</code>
         {chosenSource.authority ? (

@@ -51,7 +51,7 @@ export function RoutingResult({
   finalResult,
 }: RoutingResultProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
+    <div className="flex flex-col gap-[var(--spacing-32)]">
       {queryTrace ? (
         <QueryTrace query={queryTrace.query} params={queryTrace.params} />
       ) : null}

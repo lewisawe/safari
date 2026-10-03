@@ -18,57 +18,29 @@ export function NotComputedCard({ result }: { result: SolveNotComputed }) {
     <section
       role="status"
       aria-label="Not computed"
-      style={{
-        border: "1px solid #5a3a00",
-        background: "#1c1402",
-        borderRadius: 10,
-        padding: "1.25rem 1.5rem",
-      }}
+      className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_25%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-32)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.6rem",
-          marginBottom: "0.5rem",
-        }}
-      >
+      <div className="mb-[var(--spacing-8)] flex items-center gap-[var(--spacing-8)]">
         <span
           aria-hidden="true"
-          style={{
-            display: "inline-block",
-            padding: "0.1rem 0.5rem",
-            borderRadius: 6,
-            background: "#5a3a00",
-            color: "#ffd27f",
-            fontSize: "0.72rem",
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-          }}
+          className="inline-block rounded-[var(--radius-lg)] border border-[var(--color-sunset-orange)] px-2 py-[0.1rem] text-[0.72rem] font-medium tracking-[0.04em] text-[var(--color-sunset-orange)]"
         >
           NOT_COMPUTED
         </span>
-        <strong style={{ color: "#ffd27f", fontSize: "0.95rem" }}>
+        <strong className="text-[0.95rem] font-medium text-[var(--color-carbon-ink)]">
           {reasonLabel}
         </strong>
       </div>
 
       {/* The solver's message, shown verbatim. No numeric price is derived. */}
-      <p style={{ margin: 0, color: "#e8d9b5", lineHeight: 1.55 }}>
+      <p className="m-0 leading-[1.55] text-[var(--color-carbon-ink)]">
         {result.message}
       </p>
 
       {result.reason === "UNRESOLVED_CONTRADICTION" &&
       result.blockingContradictionIds &&
       result.blockingContradictionIds.length > 0 ? (
-        <p
-          style={{
-            marginTop: "0.75rem",
-            marginBottom: 0,
-            fontSize: "0.8rem",
-            color: "#b79a5e",
-          }}
-        >
+        <p className="mt-[var(--spacing-16)] mb-0 text-[0.8rem] text-[color-mix(in_srgb,var(--color-carbon-ink)_65%,transparent)]">
           Blocking contradiction
           {result.blockingContradictionIds.length > 1 ? "s" : ""}:{" "}
           {result.blockingContradictionIds.map((id, i) => (

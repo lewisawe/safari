@@ -19,49 +19,18 @@ export function QueryTrace({
 }: QueryTraceProps) {
   return (
     <section aria-label="GROQ query issued">
-      <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.5rem", color: "#cfcfd4" }}>
+      <h3 className="m-0 mb-2 text-[0.95rem] font-medium tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]">
         GROQ traversal issued
       </h3>
-      <pre
-        style={{
-          margin: 0,
-          padding: "1rem",
-          background: "#121214",
-          border: "1px solid #2a2a30",
-          borderRadius: 8,
-          overflowX: "auto",
-          fontSize: "0.78rem",
-          lineHeight: 1.5,
-          color: "#c7e0c7",
-          whiteSpace: "pre",
-        }}
-      >
+      <pre className="m-0 overflow-x-auto whitespace-pre rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_15%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-16)] text-[0.78rem] leading-[1.5] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
         <code>{query}</code>
       </pre>
       {params ? (
         <>
-          <h4
-            style={{
-              fontSize: "0.82rem",
-              margin: "0.75rem 0 0.4rem",
-              color: "#9a9aa2",
-            }}
-          >
+          <h4 className="mt-3 mb-2 text-[0.82rem] font-medium tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_70%,transparent)]">
             Params
           </h4>
-          <pre
-            style={{
-              margin: 0,
-              padding: "0.75rem 1rem",
-              background: "#121214",
-              border: "1px solid #2a2a30",
-              borderRadius: 8,
-              overflowX: "auto",
-              fontSize: "0.78rem",
-              lineHeight: 1.5,
-              color: "#d7d7dc",
-            }}
-          >
+          <pre className="m-0 overflow-x-auto rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_15%,transparent)] bg-[var(--color-parchment-cream)] px-[var(--spacing-16)] py-3 text-[0.78rem] leading-[1.5] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
             <code>{JSON.stringify(params, null, 2)}</code>
           </pre>
         </>
