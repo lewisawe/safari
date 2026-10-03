@@ -19,7 +19,7 @@ import {
   type SolveInput,
   type SolveResult,
   SolverInvariantError,
-} from "./types.js";
+} from "./types";
 
 function unique(values: string[]): string[] {
   return Array.from(new Set(values));

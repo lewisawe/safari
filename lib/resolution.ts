@@ -6,7 +6,7 @@
 // (FEAT-004), never here. It throws SolverInvariantError on an unknown
 // authority (via authorityRank) so the gate stays fail-closed.
 
-import { authorityRank } from "./labels.js";
+import { authorityRank } from "./labels";
 
 // ----------------------------------------------------------------------------
 // Input shapes (projected GROQ claim shape, design §6)

@@ -5,7 +5,7 @@
 // keys of this one object, so the enum and the solver's rank map can never
 // drift. Also home to the synthetic-data label strings the UI reuses.
 
-import { SolverInvariantError } from "../solver/types.js";
+import { SolverInvariantError } from "../solver/types";
 
 export const AUTHORITY_RANK = {
   "devaluation-notice": 3,
