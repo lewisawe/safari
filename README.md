@@ -58,6 +58,9 @@ Copy `.env.example` to `.env.local` and fill in the values. Full matrix:
 | `MODEL_PROVIDER_API_KEY` | **OPTIONAL** | Enables the LLM agent path (`/agent`) only. **Absent is fine** — the model-free `/solver` path runs the full pipeline with no key. |
 | `MODEL_PROVIDER` | Optional (defaults to `openai`) | `openai` or `anthropic`, selects which provider the key is for. |
 | `MODEL_NAME` | Optional | Model id override (defaults: `gpt-4o` / `claude-sonnet-4-20250514`). |
+| `SANITY_CONTEXT_MCP_URL` | Optional | Sanity Context MCP endpoint URL. With the token, traversal runs through Context MCP `groq_query`. |
+| `SANITY_CONTEXT_TOKEN` | Optional | **Organization** token with the Context Viewer role (project tokens get 403 `contextGrantRequired`). |
+| `SANITY_KB_ID` | Optional | Knowledge Base id (`kb…`). Enables the cited Knowledge Base evidence panel and the agent's `readKnowledgeBase` tool. |
 
 With `MODEL_PROVIDER_API_KEY` **absent**, the `/api/chat` route returns a typed
 `{ disabled: true, solverPath: "/solver" }` response (no crash, no fabricated
@@ -137,9 +140,8 @@ These touch live services and were **not** run by the automation:
    to **unresolved** so the gate fires on a fresh demo. It exits non-zero with a
    clear message if `SANITY_PROJECT_ID` or `SANITY_API_WRITE_TOKEN` is missing —
    it never does a silent partial write.
-5. **Create the Sanity Context MCP endpoint** against your project/dataset, with
-   the **GROQ query tool** and the **Knowledge Base** enabled (the two Context
-   concerns Safari binds as separate tools).
+5. **(Optional) Set up Sanity Context** (GROQ mode + Knowledge Base). See
+   [Sanity Context setup](#sanity-context-setup) below.
 6. **(Optional) Run or deploy the Studio.** The schema lives in the sibling
    `studio-safari/` package (standalone `sanity@6`). From that folder:
    ```bash
@@ -166,6 +168,49 @@ These touch live services and were **not** run by the automation:
 
 ---
 
+## Sanity Context setup
+
+Optional. Without it, every read uses the local `@sanity/client` and the UI says
+so. With it, the traversal runs through Context MCP and the `/solver` page
+shows a cited Knowledge Base panel.
+
+1. In **Manage → Labs**, enable **Context** and **Knowledge Bases** for the org.
+2. Create an **organization token** with the **Context Viewer** role.
+3. Deploy the schema and seed: `npx sanity schema deploy` in `studio-safari`,
+   then `npm run seed` here. Each `source` now carries a synthetic `excerpt`.
+4. In Dashboard → Context, create a **Knowledge Base** from dataset
+   `62hh3v9t/production` and build it. It should flag an Issue: ANA SFO→NRT
+   business 85,000 (printed chart) vs 90,000 (devaluation notice). Resolve it by
+   choosing the **devaluation notice**.
+5. Create an **MCP endpoint** with the dataset as its source (and the KB).
+6. Put `SANITY_CONTEXT_MCP_URL`, `SANITY_CONTEXT_TOKEN` and `SANITY_KB_ID` into
+   `.env.local`.
+7. Run `npm run check-context`. It lists tools, runs the traversal via
+   `groq_query`, prints each contradiction's resolved/unresolved status, prints
+   the KB outline header and matched entries, and reads the ANA entry. Each
+   documented failure (403 `contextGrantRequired`, -32004 schema not deployed,
+   -32005 no KB, unknown KB id) prints what to fix.
+
+What the `via` markers mean (QueryTrace on `/solver`, tool output on `/agent`):
+
+- `context-mcp`: rows came from Context MCP `groq_query` running the same fixed query.
+- `sanity-client (Context not configured)`: the Context vars are absent.
+- `sanity-client (Context MCP failed: <kind>)`: Context was configured but the
+  read failed (auth, transport, tool error, truncation); the same query ran
+  locally instead. Rows always come from the real dataset.
+
+The gate and prices don't depend on Context. The gate is the GROQ-embedded
+`committedResolution`; prices come only from the local deterministic solver;
+`resolve` stays a local write because Context is read-only. Knowledge Base
+content is evidence only.
+
+Read-after-write freshness through Context is unverified. `/solver` re-traverses
+right after `/api/resolve` writes. If Context serves a stale read, the re-run
+stays gated (NOT_COMPUTED, never a wrong price). Run `npm run check-context`
+before and after a resolve to compare the contradiction status.
+
+---
+
 ## Project layout
 
 Safari is two sibling packages under one parent folder — the Next.js app and a
@@ -178,12 +223,17 @@ parent/
 │   app/            App Router — pages (/, /agent, /solver) + api routes
 │     api/chat      Vercel AI SDK v7 agent endpoint (four Context tools)
 │     api/*         traverse (GROQ), contradictions (KB), resolve (write), solve
+│     api/kb        Knowledge Base evidence via Context MCP (presentation only)
 │   solver/         pure deterministic solver + its tests
 │   lib/            shared pure logic (groq, labels, resolution, toCandidates),
 │                   Sanity client, the committed offline fixture, and
 │                   authority.ts — the dependency-free authority enum/rank
 │                   (M1 single source of truth, imported by the Studio too)
+│                   Context MCP: context.ts (client helpers), traverse.ts
+│                   (Context-first traversal + fallback), kbOutline.ts,
+│                   kbEvidence.ts, markdownBlocks.ts (safe renderer)
 │   scripts/seed.ts idempotent §5 seed (run via `npm run seed`)
+│   scripts/check-context.ts  live Context MCP smoke test (`npm run check-context`)
 │   components/      result components (QueryTrace, KBIssueView, ResolutionCard,
 │                    ProofTable, NotComputedCard, RoutingResult, SyntheticBanner)
 └── studio-safari/  # standalone Sanity Studio (sanity@6)
