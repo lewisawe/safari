@@ -33,7 +33,7 @@
  * their bodies, and their order are unchanged.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Cabin, SolveResult } from "@/solver/types";
 import { TRAVERSE_ROUTINGS_QUERY } from "@/lib/groq";
 import type { ClaimProjection } from "@/lib/fixtures/sfo-nrt-business.rows";
@@ -136,6 +136,11 @@ export default function SolverPage() {
   const [kb, setKb] = useState<{ loading: boolean; evidence: KbEvidence | null } | null>(
     null,
   );
+  // Run guard for the un-awaited KB read: each submit bumps the counter, and a
+  // KB response only lands if it still belongs to the current run. The
+  // previous run's KB fetch is also aborted on resubmit.
+  const runIdRef = useRef(0);
+  const kbAbortRef = useRef<AbortController | null>(null);
 
   function toggleCurrency(id: string) {
     setHeld((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -143,6 +148,9 @@ export default function SolverPage() {
 
   async function runPipeline(e: React.FormEvent) {
     e.preventDefault();
+    const runId = ++runIdRef.current;
+    kbAbortRef.current?.abort();
+    kbAbortRef.current = null;
     setRunning(true);
     setError(null);
     setState(null);
@@ -176,20 +184,32 @@ export default function SolverPage() {
             .filter((c): c is string => typeof c === "string"),
         ),
       );
+      // Stale-run guard: only the latest run may write the KB panel.
+      const kbController = new AbortController();
+      kbAbortRef.current = kbController;
+      const isCurrentRun = () => runIdRef.current === runId;
       setKb({ loading: true, evidence: null });
       fetch("/api/kb", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ origin, destination, programCodes }),
+        signal: kbController.signal,
       })
         .then((res) => res.json() as Promise<KbEvidence>)
-        .then((evidence) => setKb({ loading: false, evidence }))
-        .catch(() =>
+        .then((evidence) => {
+          if (isCurrentRun()) setKb({ loading: false, evidence });
+        })
+        .catch(() => {
+          // Aborted (superseded) or stale runs are swallowed silently.
+          if (kbController.signal.aborted || !isCurrentRun()) return;
           setKb({
             loading: false,
             evidence: { configured: false, message: "Knowledge Base read failed." },
-          }),
-        );
+          });
+        })
+        .finally(() => {
+          if (kbAbortRef.current === kbController) kbAbortRef.current = null;
+        });
 
       // Chart entry ids present in the traversal, for the KB (presentation) read.
       const chartEntryIds = Array.from(
