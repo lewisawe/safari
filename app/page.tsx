@@ -48,12 +48,15 @@ const heroStyle: React.CSSProperties & Record<string, string> = {
     "var(--hero-photo)," +
     // the crafted aviation vector — the actual hero image
     "url('/hero-aviation.svg')," +
-    // text-contrast wash, anchored lower-left under the copy, fading out upward
-    "linear-gradient(105deg, rgba(14,22,32,0.78) 0%, rgba(14,22,32,0.42) 38%, rgba(14,22,32,0) 64%)," +
-    "linear-gradient(0deg, rgba(14,22,32,0.70) 0%, rgba(14,22,32,0.18) 30%, rgba(14,22,32,0) 55%)",
-  backgroundSize: "cover, cover, cover, cover",
-  backgroundPosition: "center, center, center, center",
-  backgroundRepeat: "no-repeat, no-repeat, no-repeat, no-repeat",
+    // text-contrast wash: a strong, TALL bottom-up gradient that reaches up
+    // behind the whole lower content block (headline -> subtext -> CTAs ->
+    // caption) so Parchment-Cream text clears >=4.5:1 over the light amber
+    // mid-sky. Deeper at the base, fading out above the headline. No hard
+    // scrim plate — it is a soft directional darkening, not a box.
+    "linear-gradient(0deg, rgba(14,22,32,0.86) 0%, rgba(14,22,32,0.74) 24%, rgba(14,22,32,0.52) 46%, rgba(14,22,32,0.22) 66%, rgba(14,22,32,0) 82%)",
+  backgroundSize: "cover, cover, cover",
+  backgroundPosition: "center, center, center",
+  backgroundRepeat: "no-repeat, no-repeat, no-repeat",
 };
 
 type Beat = {
