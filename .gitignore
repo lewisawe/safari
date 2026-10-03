@@ -20,3 +20,6 @@ next-env.d.ts
 IDEA.md
 WRITEUP.md
 .agents/
+# added by vercel link; keep the tracked template visible
+.env*
+!.env.example
