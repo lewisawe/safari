@@ -81,6 +81,21 @@ function BlockView({ block }: { block: Block }) {
   }
 }
 
+/**
+ * Safe markdown for plain prose (e.g. agent narration): the same
+ * markdownToBlocks/splitInline renderer as the KB panel. React text nodes only,
+ * no dangerouslySetInnerHTML; links limited to http(s).
+ */
+export function MarkdownText({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col gap-[var(--spacing-8)]">
+      {markdownToBlocks(text).map((block, i) => (
+        <BlockView key={i} block={block} />
+      ))}
+    </div>
+  );
+}
+
 export function KBEvidencePanel({ evidence, loading }: KBEvidencePanelProps) {
   const header = (
     <>

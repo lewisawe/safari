@@ -39,7 +39,7 @@ import { KBIssueView } from "@/components/KBIssueView";
 import { ResolutionCard } from "@/components/ResolutionCard";
 import { ProofTable } from "@/components/ProofTable";
 import { NotComputedCard } from "@/components/NotComputedCard";
-import { KBEvidencePanel } from "@/components/KBEvidencePanel";
+import { KBEvidencePanel, MarkdownText } from "@/components/KBEvidencePanel";
 import type { KbEvidence } from "@/lib/kbEvidence";
 import { agentKbToEvidence, kbToolOutputToEvidence } from "@/lib/kbToolEvidence";
 import { stripThinkingText } from "@/lib/stripThinking";
@@ -284,11 +284,7 @@ function PartView({ part }: { part: MessagePart }) {
   if (part.type === "text") {
     const text = stripThinking(part.text ?? "");
     if (!text) return null;
-    return (
-      <p className="m-0 whitespace-pre-wrap font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
-        {text}
-      </p>
-    );
+    return <MarkdownText text={text} />;
   }
 
   // --- Tool-result parts: render the typed output via FEAT-005 components. ---
