@@ -441,4 +441,4 @@ const LABEL_CLASS =
   "font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium uppercase tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_70%,transparent)]";
 
 const INPUT_CLASS =
-  "rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] px-[var(--spacing-16)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)]";
+  "rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] px-[var(--spacing-16)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-outlined-action)]";

@@ -92,7 +92,10 @@ export function KBIssueView({
           {explanation}
         </p>
       ) : null}
-      <div className="flex flex-wrap items-stretch gap-[var(--spacing-16)]">
+      {/* Mobile-first (FEAT-005): claims STACK vertically at <=375px and go
+          side-by-side from `sm`. min-w-0 lets each column shrink without
+          overflowing; the proof never clips horizontally. */}
+      <div className="flex flex-col items-stretch gap-[var(--spacing-16)] sm:flex-row sm:items-stretch">
         <ClaimColumn label="A" claim={claimA} />
         {/* Disagreement affordance: a centered 'vs' between the two claims. */}
         <div

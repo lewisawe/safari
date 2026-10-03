@@ -203,7 +203,7 @@ export default function AgentPage() {
           rows={3}
           aria-label="Message to the agent"
           placeholder="Describe your trip and the point currencies you hold…"
-          className="flex-1 resize-y rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] p-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] disabled:opacity-55"
+          className="flex-1 resize-y rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] p-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-outlined-action)] disabled:opacity-55"
           disabled={Boolean(modelDisabled?.disabled)}
         />
         {/* Outlined Action (ghost pill) — never a filled rectangle */}
@@ -397,7 +397,11 @@ function PartView({ part }: { part: MessagePart }) {
 function ToolBadge({ name, note }: { name: string; note: string }) {
   return (
     <div className="flex flex-wrap items-baseline gap-[var(--spacing-8)]">
-      <code className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-electric-blue)_55%,transparent)] px-[0.45rem] py-[0.1rem] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-electric-blue)]">
+      {/* A11y (FEAT-005): Outlined Action (#083e6f, 9.79:1 on cream) replaces
+          Electric Blue (#007ae5, 3.84:1) for this 12px label so the tool name
+          clears 4.5:1. Still an isolated blue-register outlined chip, matching
+          the WINNER/RESOLVED chips. */}
+      <code className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-outlined-action)_55%,transparent)] px-[0.45rem] py-[0.1rem] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
         {name}
       </code>
       <span className="text-[var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
