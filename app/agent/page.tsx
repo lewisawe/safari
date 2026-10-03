@@ -19,6 +19,12 @@
  * `{ disabled: true }` payload; we detect that (via a probe) and steer the user
  * to the model-free /solver path, which needs no key. The synthetic banner is
  * in the root layout and stays visible.
+ *
+ * PRESENTATION NOTE (FEAT-004): this file was restyled from dark inline styles
+ * to the DESIGN.md light theme (Warm Card Surface messages, outlined/ghost
+ * send action, graceful on-palette disabled card). The structural price guard,
+ * the /api/chat probe, and the useChat wiring are UNCHANGED — only className /
+ * markup differs.
  */
 
 import { useEffect, useState } from "react";
@@ -150,52 +156,46 @@ export default function AgentPage() {
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 920,
-        margin: "0 auto",
-        padding: "2.5rem 1.5rem 4rem",
-        lineHeight: 1.6,
-      }}
-    >
-      <h1 style={{ fontSize: "1.9rem", marginBottom: "0.25rem" }}>Agent path</h1>
-      <p style={{ marginTop: 0, color: "#9a9aa2" }}>
-        The model chains four Sanity Context tools (GROQ traversal, Knowledge-Base
-        read, resolve, solver) and shows its work. Prices come only from the{" "}
-        <code>runSolver</code> tool result — free text is narration (§8.2
-        structural guard).
-      </p>
+    <main className="mx-auto w-full max-w-[1200px] px-[var(--spacing-24)] pb-[var(--spacing-80)] pt-[var(--spacing-56)] font-[family-name:var(--font-jobytext)] text-[var(--color-carbon-ink)] sm:px-[var(--spacing-40)]">
+      <header className="max-w-[60ch]">
+        <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+          AGENT PATH · SHOWS ITS WORK
+        </p>
+        <h1 className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[clamp(40px,6vw,64px)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
+          Agent path
+        </h1>
+        <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
+          The model chains four Sanity Context tools (GROQ traversal,
+          Knowledge-Base read, resolve, solver) and shows its work. Prices come
+          only from the <code>runSolver</code> tool result — free text is
+          narration (§8.2 structural guard).
+        </p>
+      </header>
 
       {modelDisabled?.disabled ? (
         <section
           role="status"
-          style={{
-            marginTop: "1.5rem",
-            padding: "1rem 1.25rem",
-            border: "1px solid #5a4a1a",
-            background: "#1c180e",
-            borderRadius: 10,
-            color: "#e8d9a0",
-          }}
+          className="mt-[var(--spacing-40)] max-w-[60ch] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
         >
-          <strong>Agent path disabled.</strong>{" "}
-          {modelDisabled.message ??
-            "MODEL_PROVIDER_API_KEY is not set."}{" "}
-          <Link href="/solver" style={{ color: "#9fc0ff" }}>
+          <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+            AGENT PATH DISABLED
+          </p>
+          <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
+            {modelDisabled.message ?? "MODEL_PROVIDER_API_KEY is not set."} The
+            model-free solver path needs no API key and returns the same answer.
+          </p>
+          <Link
+            href="/solver"
+            className="mt-[var(--spacing-24)] inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] no-underline"
+          >
             Use the model-free solver path →
-          </Link>{" "}
-          (needs no API key and returns the same answer).
+          </Link>
         </section>
       ) : null}
 
       <form
         onSubmit={onSubmit}
-        style={{
-          display: "flex",
-          gap: "0.75rem",
-          marginTop: "1.5rem",
-          alignItems: "flex-start",
-        }}
+        className="mt-[var(--spacing-40)] flex flex-col items-stretch gap-[var(--spacing-16)] sm:flex-row sm:items-start"
       >
         <textarea
           value={input}
@@ -203,32 +203,14 @@ export default function AgentPage() {
           rows={3}
           aria-label="Message to the agent"
           placeholder="Describe your trip and the point currencies you hold…"
-          style={{
-            flex: 1,
-            padding: "0.65rem 0.75rem",
-            background: "#1c1c20",
-            color: "#e8e8ea",
-            border: "1px solid #3a3a40",
-            borderRadius: 8,
-            fontSize: "0.95rem",
-            resize: "vertical",
-            fontFamily: "inherit",
-          }}
+          className="flex-1 resize-y rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] p-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)] disabled:opacity-55"
           disabled={Boolean(modelDisabled?.disabled)}
         />
+        {/* Outlined Action (ghost pill) — never a filled rectangle */}
         <button
           type="submit"
           disabled={busy || Boolean(modelDisabled?.disabled)}
-          style={{
-            padding: "0.65rem 1.25rem",
-            background: busy || modelDisabled?.disabled ? "#2a2a30" : "#3b6cff",
-            color: "white",
-            border: "none",
-            borderRadius: 8,
-            fontWeight: 600,
-            cursor: busy || modelDisabled?.disabled ? "default" : "pointer",
-            whiteSpace: "nowrap",
-          }}
+          className="inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] transition-opacity disabled:cursor-default disabled:opacity-55"
         >
           {busy ? "Working…" : "Send"}
         </button>
@@ -237,21 +219,13 @@ export default function AgentPage() {
       {error ? (
         <p
           role="alert"
-          style={{
-            marginTop: "1.25rem",
-            padding: "0.75rem 1rem",
-            border: "1px solid #5a1a1a",
-            background: "#1c0e0e",
-            borderRadius: 8,
-            color: "#ffb0b0",
-            fontSize: "0.9rem",
-          }}
+          className="mt-[var(--spacing-24)] max-w-[60ch] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-sunset-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-peach-glow)_55%,var(--color-parchment-cream))] p-[var(--spacing-32)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
         >
           {error.message}
         </p>
       ) : null}
 
-      <div style={{ marginTop: "2rem", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <div className="mt-[var(--spacing-40)] flex flex-col gap-[var(--spacing-24)]">
         {messages.map((message: UIMessage) => (
           <MessageView key={message.id} message={message} />
         ))}
@@ -272,31 +246,16 @@ function MessageView({ message }: { message: UIMessage }) {
   const isUser = message.role === "user";
 
   return (
-    <div
-      style={{
-        border: "1px solid #22222a",
-        borderRadius: 10,
-        padding: "1rem 1.25rem",
-        background: isUser ? "#121214" : "#0e0e10",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "0.7rem",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-          color: "#7a7a82",
-          marginBottom: "0.6rem",
-        }}
-      >
+    <article className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-32)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
+      <div className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium uppercase tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
         {isUser ? "You" : "Safari agent"}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-24)]">
         {parts.map((part, i) => (
           <PartView key={i} part={part} />
         ))}
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -305,7 +264,7 @@ function PartView({ part }: { part: MessagePart }) {
   if (part.type === "text") {
     if (!part.text) return null;
     return (
-      <p style={{ margin: 0, color: "#d7d7dc", whiteSpace: "pre-wrap" }}>
+      <p className="m-0 whitespace-pre-wrap font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
         {part.text}
       </p>
     );
@@ -318,10 +277,10 @@ function PartView({ part }: { part: MessagePart }) {
     return (
       <div>
         <ToolBadge name="traverseRoutings" note="GROQ traversal · gating authority" />
-        <div style={{ marginTop: "0.6rem" }}>
+        <div className="mt-[var(--spacing-16)]">
           <QueryTrace query={out.query} params={out.params} />
         </div>
-        <p style={{ margin: "0.5rem 0 0", fontSize: "0.76rem", color: "#8a8a90" }}>
+        <p className="mt-[var(--spacing-8)] mb-0 text-[var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
           {out.gatingAuthority}
         </p>
       </div>
@@ -335,7 +294,7 @@ function PartView({ part }: { part: MessagePart }) {
       return (
         <div>
           <ToolBadge name="readContradictions" note="Knowledge Base · presentation only" />
-          <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", color: "#8a8a90" }}>
+          <p className="mt-[var(--spacing-8)] mb-0 text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
             No contradictions on these entries.
           </p>
         </div>
@@ -344,7 +303,7 @@ function PartView({ part }: { part: MessagePart }) {
     return (
       <div>
         <ToolBadge name="readContradictions" note="Knowledge Base · presentation only" />
-        <div style={{ marginTop: "0.6rem" }}>
+        <div className="mt-[var(--spacing-16)]">
           <KBIssueView
             title={issue.title}
             explanation={issue.explanation}
@@ -362,7 +321,7 @@ function PartView({ part }: { part: MessagePart }) {
       return (
         <div>
           <ToolBadge name="resolveContradiction" note="writes Sanity" />
-          <div style={{ marginTop: "0.6rem" }}>
+          <div className="mt-[var(--spacing-16)]">
             <ResolutionCard
               chosenClaim={out.chosenClaim}
               chosenPointsCost={out.chosenPointsCost}
@@ -381,7 +340,7 @@ function PartView({ part }: { part: MessagePart }) {
     return (
       <div>
         <ToolBadge name="resolveContradiction" note="writes Sanity" />
-        <div style={{ marginTop: "0.6rem" }}>
+        <div className="mt-[var(--spacing-16)]">
           <NotComputedCard
             result={{
               kind: "NOT_COMPUTED",
@@ -404,20 +363,22 @@ function PartView({ part }: { part: MessagePart }) {
       return (
         <div>
           <ToolBadge name="runSolver" note="deterministic solver" />
-          <NotComputedCard
-            result={{
-              kind: "NOT_COMPUTED",
-              reason: "NO_VALID_ROUTING",
-              message: "Solver returned no readable result.",
-            }}
-          />
+          <div className="mt-[var(--spacing-16)]">
+            <NotComputedCard
+              result={{
+                kind: "NOT_COMPUTED",
+                reason: "NO_VALID_ROUTING",
+                message: "Solver returned no readable result.",
+              }}
+            />
+          </div>
         </div>
       );
     }
     return (
       <div>
         <ToolBadge name="runSolver" note="deterministic solver · the only price source" />
-        <div style={{ marginTop: "0.6rem" }}>
+        <div className="mt-[var(--spacing-16)]">
           {out.kind === "COMPUTED" ? (
             <ProofTable result={out as SolveComputed} />
           ) : (
@@ -435,20 +396,13 @@ function PartView({ part }: { part: MessagePart }) {
 
 function ToolBadge({ name, note }: { name: string; note: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", flexWrap: "wrap" }}>
-      <code
-        style={{
-          padding: "0.1rem 0.45rem",
-          borderRadius: 5,
-          background: "#1c2a44",
-          color: "#9fc0ff",
-          fontSize: "0.72rem",
-          fontWeight: 700,
-        }}
-      >
+    <div className="flex flex-wrap items-baseline gap-[var(--spacing-8)]">
+      <code className="rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-electric-blue)_55%,transparent)] px-[0.45rem] py-[0.1rem] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-electric-blue)]">
         {name}
       </code>
-      <span style={{ fontSize: "0.74rem", color: "#8a8a90" }}>{note}</span>
+      <span className="text-[var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
+        {note}
+      </span>
     </div>
   );
 }

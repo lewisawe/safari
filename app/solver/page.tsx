@@ -17,6 +17,13 @@
  * then ResolutionCard, then ProofTable. The synthetic banner lives in the root
  * layout and stays visible. Every price shown originates from the solver's
  * typed output; absence renders as NOT_COMPUTED, never a guessed number.
+ *
+ * PRESENTATION NOTE (FEAT-004): this file was restyled from dark inline styles
+ * to the DESIGN.md light theme (Parchment Cream canvas, outlined/ghost action,
+ * Warm Card Surface form, loading/empty/error states). The pipeline — the five
+ * fetch calls, their exact request bodies, the currency _ids cur.amex/cur.chase
+ * sent to /api/traverse, the `held` logic, and the <RoutingResult/> wiring — is
+ * UNCHANGED. Only className/markup differs.
  */
 
 import { useState } from "react";
@@ -245,66 +252,56 @@ export default function SolverPage() {
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 920,
-        margin: "0 auto",
-        padding: "2.5rem 1.5rem 4rem",
-        lineHeight: 1.6,
-      }}
-    >
-      <h1 style={{ fontSize: "1.9rem", marginBottom: "0.25rem" }}>
-        Model-free solver
-      </h1>
-      <p style={{ marginTop: 0, color: "#9a9aa2" }}>
-        Runs the exact traversal → Knowledge-Base read → resolution →
-        deterministic solver pipeline with no model in the loop (FR-9). Needs no
-        API key.
-      </p>
+    <main className="mx-auto w-full max-w-[1200px] px-[var(--spacing-24)] pb-[var(--spacing-80)] pt-[var(--spacing-56)] font-[family-name:var(--font-jobytext)] text-[var(--color-carbon-ink)] sm:px-[var(--spacing-40)]">
+      <header className="max-w-[60ch]">
+        <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+          TRIP REQUEST · MODEL-FREE
+        </p>
+        <h1 className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobydisplay)] text-[clamp(40px,6vw,64px)] font-medium leading-[var(--leading-heading-sm)] tracking-[var(--tracking-heading-sm)] text-[var(--color-carbon-ink)]">
+          Construct the cheapest routing
+        </h1>
+        <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body-lg)] font-[450] leading-[var(--leading-body-lg)] tracking-[var(--tracking-body-lg)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
+          Runs the exact traversal → Knowledge-Base read → resolution →
+          deterministic solver pipeline with no model in the loop (FR-9). Needs
+          no API key.
+        </p>
+      </header>
 
-      <form
-        onSubmit={runPipeline}
-        style={{
-          display: "grid",
-          gap: "1rem",
-          marginTop: "1.5rem",
-          padding: "1.25rem 1.5rem",
-          border: "1px solid #2a2a30",
-          borderRadius: 10,
-          background: "#121214",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: "1rem",
-            flexWrap: "wrap",
-          }}
+      <div className="mt-[var(--spacing-40)] grid grid-cols-1 gap-[var(--spacing-40)] lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+        {/* ---------------------------------------------------------------- */}
+        {/* Trip-request form — Warm Card Surface                            */}
+        {/* ---------------------------------------------------------------- */}
+        <form
+          onSubmit={runPipeline}
+          className="grid h-max gap-[var(--spacing-24)] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
         >
-          <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-            <span style={labelText}>Origin</span>
-            <input
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value.toUpperCase())}
-              style={inputStyle}
-              aria-label="Origin IATA code"
-            />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-            <span style={labelText}>Destination</span>
-            <input
-              value={destination}
-              onChange={(e) => setDestination(e.target.value.toUpperCase())}
-              style={inputStyle}
-              aria-label="Destination IATA code"
-            />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-            <span style={labelText}>Cabin</span>
+          <div className="grid grid-cols-1 gap-[var(--spacing-16)] sm:grid-cols-2">
+            <label className="flex flex-col gap-[var(--spacing-8)]">
+              <span className={LABEL_CLASS}>Origin</span>
+              <input
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value.toUpperCase())}
+                className={INPUT_CLASS}
+                aria-label="Origin IATA code"
+              />
+            </label>
+            <label className="flex flex-col gap-[var(--spacing-8)]">
+              <span className={LABEL_CLASS}>Destination</span>
+              <input
+                value={destination}
+                onChange={(e) => setDestination(e.target.value.toUpperCase())}
+                className={INPUT_CLASS}
+                aria-label="Destination IATA code"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-[var(--spacing-8)]">
+            <span className={LABEL_CLASS}>Cabin</span>
             <select
               value={cabin}
               onChange={(e) => setCabin(e.target.value as Cabin)}
-              style={inputStyle}
+              className={INPUT_CLASS}
               aria-label="Cabin"
             >
               {CABINS.map((c) => (
@@ -314,107 +311,134 @@ export default function SolverPage() {
               ))}
             </select>
           </label>
-        </div>
 
-        <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
-          <legend style={{ ...labelText, padding: 0 }}>
-            Points currencies you hold
-          </legend>
-          <div style={{ display: "flex", gap: "1rem", marginTop: "0.4rem", flexWrap: "wrap" }}>
-            {CURRENCIES.map((c) => (
-              <label
-                key={c.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  fontSize: "0.9rem",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={Boolean(held[c.id])}
-                  onChange={() => toggleCurrency(c.id)}
-                />
-                {c.name} (<code>{c.code}</code>)
-              </label>
-            ))}
+          <fieldset className="m-0 border-0 p-0">
+            <legend className={`${LABEL_CLASS} p-0`}>
+              Points currencies you hold
+            </legend>
+            <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
+              {CURRENCIES.map((c) => (
+                <label
+                  key={c.id}
+                  className="flex items-center gap-[var(--spacing-8)] text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[var(--color-carbon-ink)]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(held[c.id])}
+                    onChange={() => toggleCurrency(c.id)}
+                    className="h-[var(--spacing-16)] w-[var(--spacing-16)] accent-[var(--color-outlined-action)]"
+                  />
+                  <span>
+                    {c.name} (<code>{c.code}</code>)
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="mt-[var(--spacing-8)]">
+            {/* Outlined Action (ghost pill) — never a filled rectangle */}
+            <button
+              type="submit"
+              disabled={running}
+              className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--color-outlined-action)] bg-transparent px-[var(--spacing-24)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-medium tracking-[var(--tracking-body)] text-[var(--color-outlined-action)] transition-opacity disabled:cursor-default disabled:opacity-55"
+            >
+              {running ? "Running pipeline…" : "Construct cheapest routing"}
+            </button>
           </div>
-        </fieldset>
+        </form>
 
-        <div>
-          <button
-            type="submit"
-            disabled={running}
-            style={{
-              padding: "0.65rem 1.25rem",
-              background: running ? "#2a2a30" : "#3b6cff",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: running ? "default" : "pointer",
-            }}
-          >
-            {running ? "Running pipeline…" : "Construct cheapest routing"}
-          </button>
-        </div>
-      </form>
+        {/* ---------------------------------------------------------------- */}
+        {/* Results column — loading / error / empty / result               */}
+        {/* ---------------------------------------------------------------- */}
+        <section className="min-w-0" aria-live="polite">
+          {running ? <RunningIndicator /> : null}
 
-      {error ? (
-        <p
-          role="alert"
-          style={{
-            marginTop: "1.25rem",
-            padding: "0.75rem 1rem",
-            border: "1px solid #5a1a1a",
-            background: "#1c0e0e",
-            borderRadius: 8,
-            color: "#ffb0b0",
-            fontSize: "0.9rem",
-          }}
-        >
-          {error}
-        </p>
-      ) : null}
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-sunset-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-peach-glow)_55%,var(--color-parchment-cream))] p-[var(--spacing-32)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
+            >
+              {error}
+            </p>
+          ) : null}
 
-      {state ? (
-        <div style={{ marginTop: "2rem" }}>
-          <RoutingResult
-            queryTrace={state.queryTrace}
-            kbIssue={
-              state.kbIssue
-                ? {
-                    title: state.kbIssue.title,
-                    explanation: state.kbIssue.explanation,
-                    claimA: state.kbIssue.claimA,
-                    claimB: state.kbIssue.claimB,
-                  }
-                : undefined
-            }
-            gatedResult={state.gatedResult}
-            resolution={state.resolution}
-            finalResult={state.finalResult}
-          />
-        </div>
-      ) : null}
+          {state ? (
+            <RoutingResult
+              queryTrace={state.queryTrace}
+              kbIssue={
+                state.kbIssue
+                  ? {
+                      title: state.kbIssue.title,
+                      explanation: state.kbIssue.explanation,
+                      claimA: state.kbIssue.claimA,
+                      claimB: state.kbIssue.claimB,
+                    }
+                  : undefined
+              }
+              gatedResult={state.gatedResult}
+              resolution={state.resolution}
+              finalResult={state.finalResult}
+            />
+          ) : null}
+
+          {!running && !error && !state ? <EmptyState /> : null}
+        </section>
+      </div>
     </main>
   );
 }
 
-const labelText: React.CSSProperties = {
-  fontSize: "0.78rem",
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-  color: "#8a8a90",
-};
+/**
+ * Loading indicator driven by the existing `running` flag. The animated dots
+ * are purely decorative (aria-hidden) and the global prefers-reduced-motion
+ * guard in globals.css flattens the animation; the text carries the meaning.
+ */
+function RunningIndicator() {
+  return (
+    <div className="rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]">
+      <p className="font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium tracking-[var(--tracking-caption)] text-[var(--color-outlined-action)]">
+        RUNNING PIPELINE
+      </p>
+      <p className="mt-[var(--spacing-16)] inline-flex items-center gap-[var(--spacing-8)] font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
+        Constructing the proof
+        <span aria-hidden="true" className="inline-flex gap-[6px]">
+          <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-[var(--color-electric-blue)] [animation-delay:0ms]" />
+          <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-[var(--color-electric-blue)] [animation-delay:200ms]" />
+          <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-[var(--color-electric-blue)] [animation-delay:400ms]" />
+        </span>
+      </p>
+      <ol className="mt-[var(--spacing-24)] flex flex-col gap-[var(--spacing-8)] text-[var(--text-body-sm)] font-[450] tracking-[var(--tracking-body-sm)] text-[color-mix(in_srgb,var(--color-carbon-ink)_65%,transparent)]">
+        <li>Traversing the typed routing graph…</li>
+        <li>Reading the Knowledge Base for contradictions…</li>
+        <li>Gating, resolving, and pricing deterministically…</li>
+      </ol>
+    </div>
+  );
+}
 
-const inputStyle: React.CSSProperties = {
-  padding: "0.5rem 0.6rem",
-  background: "#1c1c20",
-  color: "#e8e8ea",
-  border: "1px solid #3a3a40",
-  borderRadius: 6,
-  fontSize: "0.95rem",
-  minWidth: 120,
-};
+/**
+ * Empty state shown before the first submit: brief guidance on the cream
+ * canvas, framed as a quiet bordered caption rather than a boxed card.
+ */
+function EmptyState() {
+  return (
+    <div className="max-w-[48ch] border-l-[3px] border-[var(--color-outlined-action)] pl-[var(--spacing-24)]">
+      <h2 className="font-[family-name:var(--font-jobydisplay)] text-[var(--text-subheading)] font-medium leading-[var(--leading-subheading)] tracking-[var(--tracking-subheading)] text-[var(--color-carbon-ink)]">
+        No routing constructed yet
+      </h2>
+      <p className="mt-[var(--spacing-16)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[color-mix(in_srgb,var(--color-carbon-ink)_72%,transparent)]">
+        Pick an origin, destination, cabin, and the points currencies you hold,
+        then construct the routing. You&rsquo;ll see the exact GROQ traversal,
+        the Knowledge-Base contradiction, how it&rsquo;s resolved, and the
+        deterministic minimality proof — in that order.
+      </p>
+    </div>
+  );
+}
+
+const LABEL_CLASS =
+  "font-[family-name:var(--font-joby-sans-display)] text-[var(--text-caption)] font-medium uppercase tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_70%,transparent)]";
+
+const INPUT_CLASS =
+  "rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-parchment-cream)_60%,white)] px-[var(--spacing-16)] py-[var(--spacing-8)] font-[family-name:var(--font-jobytext)] text-[var(--text-body)] font-[450] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)] outline-none focus:border-[var(--color-outlined-action)]";
