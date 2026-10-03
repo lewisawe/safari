@@ -7,17 +7,18 @@
 
 import { SolverInvariantError } from "../solver/types";
 
-export const AUTHORITY_RANK = {
-  "devaluation-notice": 3,
-  "transfer-partner": 2,
-  "official-program": 1,
-  aggregator: 0,
-} as const;
+// AUTHORITY_RANK / Authority / AUTHORITY_OPTIONS now live in the dependency-free
+// lib/authority.ts so the standalone Studio can import the same single source of
+// truth without dragging in solver code (M1 preserved across the app/Studio
+// package boundary). Re-exported here so existing app imports from lib/labels
+// are unchanged.
+export {
+  AUTHORITY_RANK,
+  AUTHORITY_OPTIONS,
+  type Authority,
+} from "./authority";
 
-export type Authority = keyof typeof AUTHORITY_RANK;
-
-// Schema options.list is derived from the keys, so the two can never diverge.
-export const AUTHORITY_OPTIONS = Object.keys(AUTHORITY_RANK) as Authority[];
+import { AUTHORITY_RANK, type Authority } from "./authority";
 
 /**
  * Precedence rank for a source authority.

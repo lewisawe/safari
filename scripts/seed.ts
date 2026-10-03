@@ -1,4 +1,4 @@
-// sanity/scripts/seed.ts
+// scripts/seed.ts
 //
 // Idempotent import of the exact design §5 synthetic dataset, with FIXED _ids
 // so references and the engineered contradiction wire up reliably and reseeds

@@ -140,13 +140,24 @@ These touch live services and were **not** run by the automation:
 5. **Create the Sanity Context MCP endpoint** against your project/dataset, with
    the **GROQ query tool** and the **Knowledge Base** enabled (the two Context
    concerns Safari binds as separate tools).
-6. **(Optional) Deploy** the Next.js app:
+6. **(Optional) Run or deploy the Studio.** The schema lives in the sibling
+   `studio-safari/` package (standalone `sanity@6`). From that folder:
+   ```bash
+   cd ../studio-safari
+   npm install
+   npm run dev      # local Studio at http://localhost:3333
+   npx sanity deploy  # optional hosted Studio
+   ```
+   It targets the same `projectId` (`62hh3v9t`) / `production` dataset and
+   derives its `authority` options from `safari/lib/authority.ts`, so the schema
+   enum and the solver rank can never drift.
+7. **(Optional) Deploy** the Next.js app:
    ```bash
    npx vercel
    ```
    And set the same env vars in the Vercel project. The model key stays optional.
 
-7. **(Optional) Set `MODEL_PROVIDER_API_KEY`** to enable the `/agent` LLM path.
+8. **(Optional) Set `MODEL_PROVIDER_API_KEY`** to enable the `/agent` LLM path.
    The `/solver` path already works without it.
 
 > If you only want to see the deterministic result, you can stop after `npm run
@@ -157,16 +168,28 @@ These touch live services and were **not** run by the automation:
 
 ## Project layout
 
+Safari is two sibling packages under one parent folder — the Next.js app and a
+standalone Sanity Studio that share **one** source of truth for the authority
+enum (`lib/authority.ts`, imported by both):
+
 ```
-app/           Next.js App Router — pages (/, /agent, /solver) + api routes
-  api/chat     Vercel AI SDK v7 agent endpoint (four Context tools)
-  api/*        traverse (GROQ), contradictions (KB), resolve (write), solve
-solver/        pure deterministic solver + its tests
-lib/           shared pure logic (groq, labels, resolution, toCandidates),
-               Sanity client, and the committed offline fixture
-sanity/        embedded Studio: schema + idempotent seed (own tsconfig)
-components/    result components (QueryTrace, KBIssueView, ResolutionCard,
-               ProofTable, NotComputedCard, RoutingResult, SyntheticBanner)
+parent/
+├── safari/         # this package — the Next.js app
+│   app/            App Router — pages (/, /agent, /solver) + api routes
+│     api/chat      Vercel AI SDK v7 agent endpoint (four Context tools)
+│     api/*         traverse (GROQ), contradictions (KB), resolve (write), solve
+│   solver/         pure deterministic solver + its tests
+│   lib/            shared pure logic (groq, labels, resolution, toCandidates),
+│                   Sanity client, the committed offline fixture, and
+│                   authority.ts — the dependency-free authority enum/rank
+│                   (M1 single source of truth, imported by the Studio too)
+│   scripts/seed.ts idempotent §5 seed (run via `npm run seed`)
+│   components/      result components (QueryTrace, KBIssueView, ResolutionCard,
+│                    ProofTable, NotComputedCard, RoutingResult, SyntheticBanner)
+└── studio-safari/  # standalone Sanity Studio (sanity@6)
+    schemaTypes/     the 9 schema types; source.ts derives its authority
+                     options from ../../safari/lib/authority (no drift)
+    sanity.config.ts projectId 62hh3v9t, dataset production
 ```
 
 See [`.agents/tasks/design.md`](./.agents/tasks/design.md) for the full design
