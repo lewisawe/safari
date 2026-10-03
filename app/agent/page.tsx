@@ -39,6 +39,8 @@ import { KBIssueView } from "@/components/KBIssueView";
 import { ResolutionCard } from "@/components/ResolutionCard";
 import { ProofTable } from "@/components/ProofTable";
 import { NotComputedCard } from "@/components/NotComputedCard";
+import { KBEvidencePanel } from "@/components/KBEvidencePanel";
+import type { KbEvidence } from "@/lib/kbEvidence";
 
 // --- Narrow local mirrors of the tool-result shapes (from /api/chat tools) ---
 
@@ -47,7 +49,13 @@ interface TraverseOutput {
   query: string;
   params: Record<string, unknown>;
   gatingAuthority: string;
+  via?: string;
 }
+
+/** readKnowledgeBase tool output (Context MCP KB mode) — evidence only. */
+type ReadKnowledgeBaseOutput =
+  | { markdown: string; paths: string[]; via: string; presentationOnly: true }
+  | { error: string; message: string; presentationOnly: true };
 
 interface KBContradiction {
   _id: string;
@@ -278,7 +286,7 @@ function PartView({ part }: { part: MessagePart }) {
       <div>
         <ToolBadge name="traverseRoutings" note="GROQ traversal · gating authority" />
         <div className="mt-[var(--spacing-16)]">
-          <QueryTrace query={out.query} params={out.params} />
+          <QueryTrace query={out.query} params={out.params} via={out.via} />
         </div>
         <p className="mt-[var(--spacing-8)] mb-0 text-[length:var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
           {out.gatingAuthority}
@@ -349,6 +357,40 @@ function PartView({ part }: { part: MessagePart }) {
               message: out.message,
             }}
           />
+        </div>
+      </div>
+    );
+  }
+
+  // Knowledge Base evidence (Context MCP) — presentation only, never a price.
+  if (part.type === "tool-readKnowledgeBase" && hasOutput(part)) {
+    const out = part.output as ReadKnowledgeBaseOutput;
+    const evidence: KbEvidence =
+      "markdown" in out && typeof out.markdown === "string"
+        ? {
+            configured: true,
+            ok: true,
+            via: "context-mcp (knowledge_base)",
+            kbId: null,
+            outlineTitle: null,
+            entries: (out.paths ?? []).map((p) => ({ path: p, summary: "" })),
+            markdown: out.markdown,
+            citations: [],
+          }
+        : {
+            configured: true,
+            ok: false,
+            error: "tool_error",
+            message: "message" in out ? String(out.message) : "Knowledge Base read failed.",
+          };
+    return (
+      <div>
+        <ToolBadge
+          name="readKnowledgeBase"
+          note="Knowledge Base via Context MCP · evidence only"
+        />
+        <div className="mt-[var(--spacing-16)]">
+          <KBEvidencePanel evidence={evidence} />
         </div>
       </div>
     );

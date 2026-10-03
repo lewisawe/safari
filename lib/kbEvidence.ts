@@ -1,0 +1,100 @@
+// lib/kbEvidence.ts
+//
+// Keyless, deterministic Knowledge Base evidence read for the /solver path
+// (POST /api/kb). Reads the KB outline via Context MCP (`initial_context`),
+// picks relevant entry paths by keyword match (NO LLM), reads them with
+// `knowledge_base_read`, and returns Markdown + citations.
+//
+// PRESENTATION ONLY: the payload carries no price fields (no pointsCost /
+// chosen* / proof). KB prose may *mention* 85,000 / 90,000 as cited claims,
+// but nothing here feeds toCandidates/solve or the gate. Every failure is a
+// quiet, typed result; this never throws, so the pipeline never blocks on it.
+//
+// Server-only by convention (imports lib/context.ts). Relative imports only.
+
+import {
+  contextConfig,
+  contextKbOutline,
+  contextKbRead,
+  isKbConfigured,
+  mapContextError,
+  type ContextErrorKind,
+} from "./context";
+import { KB_DEFAULT_TERMS, parseKbOutline, pickRelevantPaths } from "./kbOutline";
+
+export type KbEvidence =
+  | { configured: false; message: string }
+  | {
+      configured: true;
+      ok: true;
+      via: "context-mcp (knowledge_base)";
+      kbId: string | null;
+      outlineTitle: string | null;
+      entries: { path: string; summary: string }[];
+      markdown: string;
+      citations: { text: string; url: string }[];
+    }
+  | { configured: true; ok: false; error: ContextErrorKind; message: string };
+
+export interface KbEvidenceRequest {
+  origin: string;
+  destination: string;
+  programCodes?: string[];
+}
+
+/** Unique http(s) Markdown links `[text](url)` in order of appearance. */
+export function extractCitations(markdown: string): { text: string; url: string }[] {
+  const out: { text: string; url: string }[] = [];
+  const seen = new Set<string>();
+  const re = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(markdown)) !== null) {
+    const key = `${m[1]}|${m[2]}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ text: m[1], url: m[2] });
+  }
+  return out;
+}
+
+export async function readKbEvidence(req: KbEvidenceRequest): Promise<KbEvidence> {
+  const cfg = contextConfig();
+  if (!isKbConfigured(cfg)) {
+    return {
+      configured: false,
+      message: cfg
+        ? "Knowledge Base not connected yet: set SANITY_KB_ID to enable Context MCP Knowledge Base mode."
+        : "Knowledge Base not connected yet: Sanity Context is not configured (SANITY_CONTEXT_MCP_URL, SANITY_CONTEXT_TOKEN, SANITY_KB_ID).",
+    };
+  }
+  try {
+    const { text, kbId } = await contextKbOutline({ cfg });
+    const outline = parseKbOutline(text);
+    const terms = [
+      ...KB_DEFAULT_TERMS,
+      req.origin,
+      req.destination,
+      ...(req.programCodes ?? []),
+    ];
+    const paths = pickRelevantPaths(outline.entries, terms);
+    if (paths.length === 0) {
+      return { configured: true, ok: false, error: "tool_error", message: "no matching KB entries" };
+    }
+    const { markdown } = await contextKbRead(paths, { cfg });
+    const byPath = new Map(outline.entries.map((e) => [e.path, e.summary]));
+    return {
+      configured: true,
+      ok: true,
+      via: "context-mcp (knowledge_base)",
+      kbId: kbId ?? outline.kbId,
+      outlineTitle: outline.title,
+      entries: paths.map((p) => ({ path: p, summary: byPath.get(p) ?? "" })),
+      markdown,
+      citations: extractCitations(markdown),
+    };
+  } catch (err) {
+    const ce = mapContextError(err);
+    console.error("[kb] Knowledge Base read failed:", ce.kind);
+    return { configured: true, ok: false, error: ce.kind, message: ce.message };
+  }
+}

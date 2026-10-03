@@ -24,6 +24,13 @@
  * fetch calls, their exact request bodies, the currency _ids cur.amex/cur.chase
  * sent to /api/traverse, the `held` logic, and the <RoutingResult/> wiring — is
  * UNCHANGED. Only className/markup differs.
+ *
+ * PRESENTATION NOTE (Context MCP): QueryTrace shows which read path served the
+ * traversal (`via` from /api/traverse), and a separate, NON-AWAITED
+ * POST /api/kb fills a "Knowledge Base (via Context MCP)" evidence panel after
+ * KBIssueView. That read is presentation only: it has its own state, never
+ * feeds solve/the gate, swallows all errors, and the five pipeline fetches,
+ * their bodies, and their order are unchanged.
  */
 
 import { useState } from "react";
@@ -32,6 +39,8 @@ import { TRAVERSE_ROUTINGS_QUERY } from "@/lib/groq";
 import type { ClaimProjection } from "@/lib/fixtures/sfo-nrt-business.rows";
 import { RoutingResult } from "@/components/RoutingResult";
 import type { ResolutionCardProps } from "@/components/ResolutionCard";
+import { KBEvidencePanel } from "@/components/KBEvidencePanel";
+import type { KbEvidence } from "@/lib/kbEvidence";
 
 // The currencies a user can hold, mapped to their deterministic seed _ids (§5.1).
 const CURRENCIES: { id: string; code: string; name: string }[] = [
@@ -83,10 +92,11 @@ interface TraverseResponse {
   rows: unknown[];
   query: string;
   params: Record<string, unknown>;
+  via?: string;
 }
 
 interface PipelineState {
-  queryTrace: { query: string; params: Record<string, unknown> };
+  queryTrace: { query: string; params: Record<string, unknown>; via?: string };
   kbIssue?: KBContradiction;
   gatedResult?: SolveResult;
   resolution?: ResolutionCardProps;
@@ -122,6 +132,10 @@ export default function SolverPage() {
   const [state, setState] = useState<PipelineState | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Knowledge Base evidence (presentation only) — separate from the pipeline.
+  const [kb, setKb] = useState<{ loading: boolean; evidence: KbEvidence | null } | null>(
+    null,
+  );
 
   function toggleCurrency(id: string) {
     setHeld((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -132,6 +146,7 @@ export default function SolverPage() {
     setRunning(true);
     setError(null);
     setState(null);
+    setKb(null);
 
     const currencyIds = CURRENCIES.filter((c) => held[c.id]).map((c) => c.id);
 
@@ -149,8 +164,32 @@ export default function SolverPage() {
       });
 
       const next: PipelineState = {
-        queryTrace: { query: traverse.query, params: traverse.params },
+        queryTrace: { query: traverse.query, params: traverse.params, via: traverse.via },
       };
+
+      // Knowledge Base evidence via Context MCP — fire-and-forget, NOT awaited,
+      // never blocks or alters the pipeline below; all errors are swallowed.
+      const programCodes = Array.from(
+        new Set(
+          traverse.rows
+            .map((row) => (row as { toProgram?: { code?: unknown } }).toProgram?.code)
+            .filter((c): c is string => typeof c === "string"),
+        ),
+      );
+      setKb({ loading: true, evidence: null });
+      fetch("/api/kb", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ origin, destination, programCodes }),
+      })
+        .then((res) => res.json() as Promise<KbEvidence>)
+        .then((evidence) => setKb({ loading: false, evidence }))
+        .catch(() =>
+          setKb({
+            loading: false,
+            evidence: { configured: false, message: "Knowledge Base read failed." },
+          }),
+        );
 
       // Chart entry ids present in the traversal, for the KB (presentation) read.
       const chartEntryIds = Array.from(
@@ -424,6 +463,9 @@ export default function SolverPage() {
                       claimB: state.kbIssue.claimB,
                     }
                   : undefined
+              }
+              kbEvidence={
+                kb ? <KBEvidencePanel evidence={kb.evidence} loading={kb.loading} /> : undefined
               }
               gatedResult={state.gatedResult}
               resolution={state.resolution}
