@@ -78,6 +78,52 @@ export function cleanKbMessage(v: unknown): string {
   return cleaned.length > MAX_MESSAGE_CHARS ? `${cleaned.slice(0, MAX_MESSAGE_CHARS)}…` : cleaned;
 }
 
+/**
+ * Map the server-side `knowledgeBase` evidence that traverseRoutings attaches
+ * (lib/agentKbEvidence.ts) to KbEvidence. Success keeps paths + citations;
+ * the typed `{ error: { kind, message } }` keeps its kind and cleaned message.
+ * Evidence only: never a price, never the gate.
+ */
+export function agentKbToEvidence(kb: unknown): KbEvidence {
+  const o = (kb ?? {}) as Partial<{
+    markdown: unknown;
+    paths: unknown;
+    citations: unknown;
+    error: unknown;
+  }>;
+  if (typeof o.markdown === "string") {
+    const paths = Array.isArray(o.paths)
+      ? o.paths.filter((p): p is string => typeof p === "string")
+      : [];
+    const citations = Array.isArray(o.citations)
+      ? o.citations.filter(
+          (c): c is { text: string; url: string } =>
+            !!c &&
+            typeof (c as { text?: unknown }).text === "string" &&
+            typeof (c as { url?: unknown }).url === "string" &&
+            /^https?:\/\//i.test((c as { url: string }).url),
+        )
+      : [];
+    return {
+      configured: true,
+      ok: true,
+      via: "context-mcp (knowledge_base)",
+      kbId: null,
+      outlineTitle: null,
+      entries: paths.map((p) => ({ path: p, summary: "" })),
+      markdown: o.markdown,
+      citations,
+    };
+  }
+  const err = (o.error ?? {}) as Partial<{ kind: unknown; message: unknown }>;
+  return {
+    configured: true,
+    ok: false,
+    error: toKind(err.kind),
+    message: cleanKbMessage(err.message),
+  };
+}
+
 export function kbToolOutputToEvidence(out: unknown): KbEvidence {
   const o = (out ?? {}) as Partial<{
     markdown: unknown;

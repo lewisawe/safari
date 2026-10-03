@@ -23,6 +23,14 @@
 //                        Knowledge Base mode `knowledge_base_read`. Evidence /
 //                        citation only: never a price source, never gates.
 //
+// Nova hardening (it ignores prompt-only rules):
+//   - traverseRoutings attaches a server-side, deterministic KB read of the
+//     contradicted entry as `knowledgeBase` evidence (fail-soft, evidence only).
+//   - traverseRoutings has a `toModelOutput` that withholds per-routing
+//     pointsCost/taxesUsd/ratio from the MODEL; the UI still gets full rows.
+//   - `<thinking>…</thinking>` is stripped from streamed text server-side
+//     (experimental_transform, lib/stripThinking.ts).
+//
 // Sanity Context MCP: traverseRoutings and readContradictions run their FIXED
 // queries through Context MCP `groq_query` (GROQ mode) when configured, with a
 // visible `via` marker and a fallback to @sanity/client (lib/traverse.ts). The
@@ -53,7 +61,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
-import type { LanguageModel, UIMessage } from "ai";
+import type { JSONValue, LanguageModel, UIMessage } from "ai";
 import { z } from "zod";
 
 import { getReadClient, getWriteClient } from "@/lib/sanityClient";
@@ -71,6 +79,13 @@ import {
   type ContextConfig,
 } from "@/lib/context";
 import { getKbOutlineCached } from "@/lib/kbOutlineCache";
+import {
+  contradictedProgramCodes,
+  readAgentKbEvidence,
+  type AgentKbEvidence,
+} from "@/lib/agentKbEvidence";
+import { summarizeTraverseForModel } from "@/lib/traverseModelOutput";
+import { stripThinkingTransform } from "@/lib/stripThinking";
 import { toCandidates } from "@/lib/toCandidates";
 import { solve } from "@/solver/solve";
 import {
@@ -142,19 +157,42 @@ const SYSTEM_PROMPT = [
   "2. Before calling `runSolver` you MUST first call `traverseRoutings`, then `readContradictions` for the chart entries on the candidate routings.",
   "3. If any routing's embedded contradiction is unresolved (committedResolution is null), you MUST call `resolveContradiction` for it and show both claims with their sources and the resolution rationale before you may call `runSolver`.",
   "4. The gate is decided by the GROQ-embedded contradiction returned by `traverseRoutings`, not by `readContradictions` (which is presentation-only).",
-  "5. Knowledge Base entries are evidence for narration and citation only. Cite the entry path. They never decide the gate and never supply a price; only runSolver does.",
+  "5. Knowledge Base entries are evidence for narration and citation only. Cite the entry path. They never decide the gate and never supply a price; only runSolver does. When traverseRoutings returns `knowledgeBase` evidence, cite its path(s).",
+  "6. Final points costs come ONLY from runSolver. traverseRoutings deliberately withholds per-routing prices; never write a per-routing price list. Before runSolver you may only name the contradiction and its two claims with their sources.",
   "",
-  "Tool order for a routing question: (1) traverseRoutings; (2) readContradictions for the chart entries on the routings, and, when readKnowledgeBase is available, you MUST also call it with the outline path of the entry about the contradicted routing; (3) resolveContradiction for each unresolved contradiction; (4) runSolver with the same currencyIds/origin/destination/cabin. Call each once; do not repeat a step that already succeeded. Then answer.",
+  "Tool order for a routing question: (1) traverseRoutings; (2) readContradictions for the chart entries on the routings (the Knowledge Base entry about a contradicted routing is already attached to the traverseRoutings result as `knowledgeBase`; use readKnowledgeBase only for other entries); (3) resolveContradiction for each unresolved contradiction; (4) runSolver with the same currencyIds/origin/destination/cabin. Call each once; do not repeat a step that already succeeded. Then answer.",
   "Before runSolver returns, do NOT list per-routing points costs from traverseRoutings; you may name the contradiction and both claims with their sources. Quote points costs only from the runSolver result.",
   "",
   "Your job is to narrate the work — the UI renders the actual tool results. Keep prose brief; the numbers live in the tool results, not your text. Do not output <thinking> tags.",
 ].join("\n");
 
+// --- Server-side KB evidence for traverseRoutings ---------------------------
+//
+// Why traverseRoutings (and not resolveContradiction): traversal is the one
+// step every routing turn runs first, and it is where a contradicted chart
+// entry is discovered. resolveContradiction is skipped once a decision is
+// committed, so KB evidence attached there would vanish on later turns. The
+// read is deterministic (same selection as /api/kb), evidence-only (never fed
+// to the solver or the gate; runSolver re-traverses on its own) and fail-soft
+// (a KB error/timeout becomes `knowledgeBase: { error: { kind, message } }`).
+// Returns undefined when KB mode is off or no entry is contradicted.
+async function kbEvidenceForRows(
+  rows: TraverseRow[],
+  origin: string,
+  destination: string,
+): Promise<AgentKbEvidence | undefined> {
+  const cfg = contextConfig();
+  if (!isKbConfigured(cfg)) return undefined;
+  const programCodes = contradictedProgramCodes(rows);
+  if (programCodes.length === 0) return undefined;
+  return readAgentKbEvidence(cfg, { origin, destination, programCodes });
+}
+
 // --- Tool: traverseRoutings (GROQ traversal, gating authority) --------------
 
 const traverseRoutings = tool({
   description:
-    "GROQ reference-graph traversal (Context concern #1). Given the point currencies the user holds and origin/destination/cabin, returns candidate routings with their blocking contradictions embedded. This embedded contradiction is the GATING authority for pricing.",
+    "GROQ reference-graph traversal (Context concern #1). Given the point currencies the user holds and origin/destination/cabin, returns candidate routings with their blocking contradictions embedded (both claims with sources) and, when available, Knowledge Base evidence about the contradicted entry. This embedded contradiction is the GATING authority for pricing. Per-routing prices are withheld: only runSolver prices.",
   inputSchema: z.object({
     currencyIds: z
       .array(z.string())
@@ -167,6 +205,7 @@ const traverseRoutings = tool({
     const params = buildTraverseParams({ currencyIds, origin, destination, cabin });
     // Same fixed query, same row shape — via Context MCP when configured.
     const { rows, via, executedQuery } = await runTraversal(params);
+    const knowledgeBase = await kbEvidenceForRows(rows as TraverseRow[], origin, destination);
     return {
       rows,
       query: TRAVERSE_ROUTINGS_QUERY,
@@ -174,8 +213,17 @@ const traverseRoutings = tool({
       gatingAuthority: GATING_AUTHORITY_NOTE,
       via,
       executedQuery,
+      ...(knowledgeBase ? { knowledgeBase } : {}),
     };
   },
+  // Model-facing view: routing structure + contradictions (both claims with
+  // sources) + KB evidence, WITHOUT per-routing pointsCost/taxesUsd/ratio. The
+  // UI part still carries the full rows. Nothing the model sees here is a
+  // solver input: runSolver re-runs the fixed traversal server-side.
+  toModelOutput: ({ output }) => ({
+    type: "json",
+    value: summarizeTraverseForModel(output) as unknown as JSONValue,
+  }),
 });
 
 // --- Tool: readContradictions (Knowledge-Base read, PRESENTATION-ONLY) ------
@@ -471,12 +519,13 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "invalid JSON body" }, { status: 400 });
   }
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const modelMessages = await convertToModelMessages(messages);
-
   const cfg = contextConfig();
   const kbEnabled = isKbConfigured(cfg);
   const system = await buildSystemPrompt(cfg);
   const tools = kbEnabled ? { ...AGENT_TOOLS, readKnowledgeBase } : AGENT_TOOLS;
+  // Pass the tools so prior turns' tool results go through toModelOutput too
+  // (traverseRoutings history never re-exposes per-routing prices).
+  const modelMessages = await convertToModelMessages(messages, { tools });
 
   const result = streamText({
     model,
@@ -485,6 +534,9 @@ export async function POST(request: Request): Promise<Response> {
     tools,
     // v7 translation of the design's `maxSteps` (context.json).
     stopWhen: stepCountIs(MAX_AGENT_STEPS),
+    // Nova writes <thinking>…</thinking> inline and ignores the prompt rule;
+    // strip it server-side, even when the tags are split across chunks.
+    experimental_transform: stripThinkingTransform(),
   });
 
   return result.toUIMessageStreamResponse();

@@ -20,7 +20,12 @@ import {
   mapContextError,
   type ContextErrorKind,
 } from "./context";
-import { KB_DEFAULT_TERMS, parseKbOutline, pickRelevantPaths } from "./kbOutline";
+import {
+  KB_DEFAULT_TERMS,
+  parseKbOutline,
+  pickRelevantPaths,
+  type KbOutline,
+} from "./kbOutline";
 
 export type KbEvidence =
   | { configured: false; message: string }
@@ -57,6 +62,25 @@ export function extractCitations(markdown: string): { text: string; url: string 
   return out;
 }
 
+/**
+ * The deterministic (no-LLM) KB entry selection shared by POST /api/kb and the
+ * agent's server-side KB read: parse the outline, match the default terms plus
+ * the request's route and program codes. Pure.
+ */
+export function selectKbEntries(
+  outlineText: string,
+  req: KbEvidenceRequest,
+): { outline: KbOutline; paths: string[] } {
+  const outline = parseKbOutline(outlineText);
+  const terms = [
+    ...KB_DEFAULT_TERMS,
+    req.origin,
+    req.destination,
+    ...(req.programCodes ?? []),
+  ];
+  return { outline, paths: pickRelevantPaths(outline.entries, terms) };
+}
+
 export async function readKbEvidence(req: KbEvidenceRequest): Promise<KbEvidence> {
   const cfg = contextConfig();
   if (!isKbConfigured(cfg)) {
@@ -69,14 +93,7 @@ export async function readKbEvidence(req: KbEvidenceRequest): Promise<KbEvidence
   }
   try {
     const { text, kbId } = await contextKbOutline({ cfg });
-    const outline = parseKbOutline(text);
-    const terms = [
-      ...KB_DEFAULT_TERMS,
-      req.origin,
-      req.destination,
-      ...(req.programCodes ?? []),
-    ];
-    const paths = pickRelevantPaths(outline.entries, terms);
+    const { outline, paths } = selectKbEntries(text, req);
     if (paths.length === 0) {
       return { configured: true, ok: false, error: "tool_error", message: "no matching KB entries" };
     }

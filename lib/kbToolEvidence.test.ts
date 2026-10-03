@@ -52,3 +52,37 @@ describe("kbToolOutputToEvidence", () => {
     for (const k of PRICE_KEYS) expect(ev).not.toHaveProperty(k);
   });
 });
+
+describe("agentKbToEvidence (traverseRoutings.knowledgeBase)", () => {
+  it("maps success to ok evidence with paths and http citations only", async () => {
+    const { agentKbToEvidence } = await import("./kbToolEvidence");
+    const ev = agentKbToEvidence({
+      via: "context-mcp (knowledge_base mode)",
+      paths: ["award_pricing/devaluations"],
+      markdown: "# Devaluation",
+      citations: [
+        { text: "ok", url: "https://example.invalid/a" },
+        { text: "bad", url: "javascript:alert(1)" },
+      ],
+      presentationOnly: true,
+    });
+    expect(ev).toEqual({
+      configured: true,
+      ok: true,
+      via: "context-mcp (knowledge_base)",
+      kbId: null,
+      outlineTitle: null,
+      entries: [{ path: "award_pricing/devaluations", summary: "" }],
+      markdown: "# Devaluation",
+      citations: [{ text: "ok", url: "https://example.invalid/a" }],
+    });
+  });
+
+  it("keeps the typed nested error kind and a cleaned message", async () => {
+    const { agentKbToEvidence } = await import("./kbToolEvidence");
+    expect(
+      agentKbToEvidence({ error: { kind: "transport", message: "timed out\n    at x" }, presentationOnly: true }),
+    ).toEqual({ configured: true, ok: false, error: "transport", message: "timed out" });
+    expect(agentKbToEvidence({ error: { kind: "weird" } })).toMatchObject({ ok: false, error: "tool_error" });
+  });
+});

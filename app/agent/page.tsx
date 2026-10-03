@@ -41,7 +41,8 @@ import { ProofTable } from "@/components/ProofTable";
 import { NotComputedCard } from "@/components/NotComputedCard";
 import { KBEvidencePanel } from "@/components/KBEvidencePanel";
 import type { KbEvidence } from "@/lib/kbEvidence";
-import { kbToolOutputToEvidence } from "@/lib/kbToolEvidence";
+import { agentKbToEvidence, kbToolOutputToEvidence } from "@/lib/kbToolEvidence";
+import { stripThinkingText } from "@/lib/stripThinking";
 
 // --- Narrow local mirrors of the tool-result shapes (from /api/chat tools) ---
 
@@ -51,6 +52,8 @@ interface TraverseOutput {
   params: Record<string, unknown>;
   gatingAuthority: string;
   via?: string;
+  /** Server-side KB evidence about the contradicted entry (evidence only). */
+  knowledgeBase?: unknown;
 }
 
 /** readKnowledgeBase tool output (Context MCP KB mode) — evidence only.
@@ -269,13 +272,11 @@ function MessageView({ message }: { message: UIMessage }) {
 
 /**
  * Amazon Nova emits its chain of thought as `<thinking>…</thinking>` inside the
- * text stream. Hide complete blocks and a still-open trailing block (mid-stream).
+ * text stream. /api/chat strips it server-side; this is defense-in-depth with
+ * the same rules (complete blocks and a still-open trailing block).
  */
 function stripThinking(text: string): string {
-  return text
-    .replace(/<thinking>[\s\S]*?<\/thinking>/g, "")
-    .replace(/<thinking>[\s\S]*$/, "")
-    .trim();
+  return stripThinkingText(text).trim();
 }
 
 function PartView({ part }: { part: MessagePart }) {
@@ -303,6 +304,17 @@ function PartView({ part }: { part: MessagePart }) {
         <p className="mt-[var(--spacing-8)] mb-0 text-[length:var(--text-caption)] font-[450] tracking-[var(--tracking-caption)] text-[color-mix(in_srgb,var(--color-carbon-ink)_60%,transparent)]">
           {out.gatingAuthority}
         </p>
+        {out.knowledgeBase ? (
+          <div className="mt-[var(--spacing-16)]">
+            <ToolBadge
+              name="knowledgeBase"
+              note="read server-side via Context MCP · evidence only, never a price"
+            />
+            <div className="mt-[var(--spacing-16)]">
+              <KBEvidencePanel evidence={agentKbToEvidence(out.knowledgeBase)} />
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }

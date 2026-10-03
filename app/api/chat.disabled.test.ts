@@ -151,6 +151,14 @@ describe("chat route — MODEL_PROVIDER=bedrock (no API key needed)", () => {
     expect(streamText).toHaveBeenCalledTimes(1);
   });
 
+  it("wires the Nova hardening: thinking-strip transform + model-facing traverse output", async () => {
+    await chatPOST(jsonRequest({ messages: [] }));
+    const opts = (streamText.mock.calls[0] as unknown as [Record<string, unknown>])[0];
+    expect(typeof opts.experimental_transform).toBe("function");
+    const tools = opts.tools as Record<string, { toModelOutput?: unknown }>;
+    expect(typeof tools.traverseRoutings.toModelOutput).toBe("function");
+  });
+
   it("honors MODEL_NAME for the Bedrock model id", async () => {
     process.env.MODEL_NAME = "us.amazon.nova-lite-v1:0";
     await chatPOST(jsonRequest({ messages: [] }));
