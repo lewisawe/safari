@@ -56,15 +56,27 @@ Copy `.env.example` to `.env.local` and fill in the values. Full matrix:
 | `SANITY_API_READ_TOKEN` | Optional | Not needed for a **public** dataset; set only for a private dataset or higher rate limits. |
 | `SANITY_API_WRITE_TOKEN` | Required for `npm run seed` and the resolve write action | Write token. Missing it throws a typed, visible error — never a silent partial write. |
 | `MODEL_PROVIDER_API_KEY` | **OPTIONAL** | Enables the LLM agent path (`/agent`) only. **Absent is fine** — the model-free `/solver` path runs the full pipeline with no key. |
-| `MODEL_PROVIDER` | Optional (defaults to `openai`) | `openai` or `anthropic`, selects which provider the key is for. |
-| `MODEL_NAME` | Optional | Model id override (defaults: `gpt-4o` / `claude-sonnet-4-20250514`). |
+| `MODEL_PROVIDER` | Optional (defaults to `openai`) | `bedrock`, `openai` or `anthropic`. `bedrock` needs no key (AWS credential chain). |
+| `MODEL_NAME` | Optional | Model id override (defaults: `us.amazon.nova-pro-v1:0` / `gpt-4o` / `claude-sonnet-4-20250514`). |
+| `AWS_PROFILE` / `AWS_REGION` | Bedrock only | Local AWS profile and region (default `us-east-1`) for Bedrock. |
 | `SANITY_CONTEXT_MCP_URL` | Optional | Sanity Context MCP endpoint URL. With the token, traversal runs through Context MCP `groq_query`. |
 | `SANITY_CONTEXT_TOKEN` | Optional | **Organization** token with the Context Viewer role (project tokens get 403 `contextGrantRequired`). |
 | `SANITY_KB_ID` | Optional | Knowledge Base id (`kb…`). Enables the cited Knowledge Base evidence panel and the agent's `readKnowledgeBase` tool. |
 
-With `MODEL_PROVIDER_API_KEY` **absent**, the `/api/chat` route returns a typed
+With no model provider configured (no `MODEL_PROVIDER=bedrock` and no
+`MODEL_PROVIDER_API_KEY`), the `/api/chat` route returns a typed
 `{ disabled: true, solverPath: "/solver" }` response (no crash, no fabricated
 price) and the agent page steers you to the model-free path.
+
+### Model provider
+
+The agent runs on Amazon Bedrock with Amazon Nova Pro
+(`us.amazon.nova-pro-v1:0`, a cross-region inference profile) when
+`MODEL_PROVIDER=bedrock`. Credentials come from the AWS SDK chain, so locally
+`AWS_PROFILE=<profile>` plus `AWS_REGION=us-east-1` in `.env.local` is enough; no
+key goes in the repo. Bedrock is pay-per-token, not free. For a public deploy,
+use env keys or an IAM role scoped to `bedrock:InvokeModel` and
+`bedrock:InvokeModelWithResponseStream` on that model / inference profile only.
 
 ---
 

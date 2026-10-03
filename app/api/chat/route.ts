@@ -14,7 +14,9 @@
 //                        never fed to the solver. Drives the KBIssueView.
 //   resolveContradiction — app action that WRITES Sanity (same logic as the
 //                        resolve route, §7.4): fail-closed, idempotent.
-//   runSolver          — wraps the pure deterministic solver (§7.3). Any thrown
+//   runSolver          — wraps the pure deterministic solver (§7.3). It re-runs
+//                        the fixed traversal server-side (the model never
+//                        passes rows, candidates or prices). Any thrown
 //                        SolverInvariantError degrades to NOT_COMPUTED, NEVER a
 //                        price (§7.3 error contract).
 //   readKnowledgeBase  — (only when SANITY_KB_ID is set) Sanity Context MCP
@@ -40,14 +42,17 @@
 // says `maxSteps`. v7 uses `stopWhen: stepCountIs(n)` + `tool({ inputSchema })`
 // + `toUIMessageStreamResponse()`; that is what ships here.
 //
-// NFR-3 fail-safe: `MODEL_PROVIDER_API_KEY` is OPTIONAL. If it is ABSENT this
-// route returns a typed `{ disabled: true, ... }` JSON telling the caller to use
-// the model-free /solver path. It NEVER crashes and NEVER fabricates a price,
-// so the model-free path stays the working default.
+// NFR-3 fail-safe: a model provider is OPTIONAL. MODEL_PROVIDER=bedrock uses
+// the AWS credential chain (no key); openai/anthropic need MODEL_PROVIDER_API_KEY.
+// With no usable provider this route returns a typed `{ disabled: true, ... }`
+// JSON telling the caller to use the model-free /solver path. It NEVER crashes
+// and NEVER fabricates a price, so the model-free path stays the working default.
 
 import { streamText, tool, stepCountIs, convertToModelMessages } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import type { LanguageModel, UIMessage } from "ai";
 import { z } from "zod";
 
@@ -100,15 +105,25 @@ const GATING_AUTHORITY_NOTE =
   "Gating authority: each routing's embedded contradiction (committedResolution == null means UNRESOLVED) is what gates pricing. readContradictions is presentation-only and never gates. runSolver stays blocked until every blocking contradiction is resolved.";
 
 /**
- * Resolve the model provider from MODEL_PROVIDER_API_KEY. Returns null when the
- * key is ABSENT so the route can fail safe to the /solver path (NFR-3). The
- * provider is chosen by MODEL_PROVIDER (anthropic|openai), defaulting to openai.
+ * Resolve the model provider. MODEL_PROVIDER=bedrock uses Amazon Bedrock with
+ * the AWS SDK credential chain (AWS_PROFILE locally, env keys or a role when
+ * deployed), so it needs no MODEL_PROVIDER_API_KEY. The key-based providers
+ * (anthropic|openai, default openai) return null when the key is ABSENT so the
+ * route can fail safe to the /solver path (NFR-3).
  */
 function getModel(): LanguageModel | null {
+  const provider = (process.env.MODEL_PROVIDER ?? "openai").trim().toLowerCase();
+  if (provider === "bedrock") {
+    const bedrock = createAmazonBedrock({
+      region: process.env.AWS_REGION ?? "us-east-1",
+      credentialProvider: fromNodeProviderChain(),
+    });
+    return bedrock(process.env.MODEL_NAME ?? "us.amazon.nova-pro-v1:0");
+  }
+
   const key = process.env.MODEL_PROVIDER_API_KEY;
   if (!key || key.trim() === "") return null;
 
-  const provider = (process.env.MODEL_PROVIDER ?? "openai").toLowerCase();
   if (provider === "anthropic") {
     const anthropic = createAnthropic({ apiKey: key });
     return anthropic(process.env.MODEL_NAME ?? "claude-sonnet-4-20250514");
@@ -129,7 +144,10 @@ const SYSTEM_PROMPT = [
   "4. The gate is decided by the GROQ-embedded contradiction returned by `traverseRoutings`, not by `readContradictions` (which is presentation-only).",
   "5. Knowledge Base entries are evidence for narration and citation only. Cite the entry path. They never decide the gate and never supply a price; only runSolver does.",
   "",
-  "Your job is to narrate the work — the UI renders the actual tool results. Keep prose brief; the numbers live in the tool results, not your text.",
+  "Tool order for a routing question: (1) traverseRoutings; (2) readContradictions for the chart entries on the routings, and, when readKnowledgeBase is available, you MUST also call it with the outline path of the entry about the contradicted routing; (3) resolveContradiction for each unresolved contradiction; (4) runSolver with the same currencyIds/origin/destination/cabin. Call each once; do not repeat a step that already succeeded. Then answer.",
+  "Before runSolver returns, do NOT list per-routing points costs from traverseRoutings; you may name the contradiction and both claims with their sources. Quote points costs only from the runSolver result.",
+  "",
+  "Your job is to narrate the work — the UI renders the actual tool results. Keep prose brief; the numbers live in the tool results, not your text. Do not output <thinking> tags.",
 ].join("\n");
 
 // --- Tool: traverseRoutings (GROQ traversal, gating authority) --------------
@@ -350,25 +368,23 @@ const resolveContradiction = tool({
 
 const runSolver = tool({
   description:
-    "Runs the deterministic solver on the candidate routings and returns the typed SolveResult (COMPUTED with chosen+proof, or NOT_COMPUTED). This is the ONLY source of a points cost or verdict. Pass the raw traversal rows (preferred) or pre-mapped candidates.",
+    "Runs the deterministic solver and returns the typed SolveResult (COMPUTED with chosen+proof, or NOT_COMPUTED). This is the ONLY source of a points cost or verdict. Pass the same currencyIds/origin/destination/cabin you gave traverseRoutings: the server re-runs that fixed traversal itself (picking up any resolution you just wrote) and prices those rows. You never pass rows, candidates or prices.",
   inputSchema: z.object({
-    origin: z.string(),
-    destination: z.string(),
-    cabin: z.enum(CABIN_VALUES),
-    // Accept either the raw §6 rows (preferred) or already-flattened candidates.
-    rows: z.array(z.any()).optional(),
-    candidates: z.array(z.any()).optional(),
+    currencyIds: z
+      .array(z.string())
+      .describe("pointsCurrency _ids the user holds, same as for traverseRoutings"),
+    origin: z.string().describe("origin IATA code, e.g. SFO"),
+    destination: z.string().describe("destination IATA code, e.g. NRT"),
+    cabin: z.enum(CABIN_VALUES).describe("cabin class"),
   }),
-  async execute({ origin, destination, cabin, rows, candidates }): Promise<SolveResult> {
+  async execute({ currencyIds, origin, destination, cabin }): Promise<SolveResult> {
     try {
-      let candidateList: CandidateRouting[];
-      if (Array.isArray(candidates) && candidates.length > 0) {
-        candidateList = candidates as CandidateRouting[];
-      } else if (Array.isArray(rows)) {
-        candidateList = toCandidates(rows as TraverseRow[]);
-      } else {
-        candidateList = [];
-      }
+      // Pricing rows come ONLY from the fixed TRAVERSE_ROUTINGS_QUERY, re-run
+      // server-side so the model can never hand the solver invented rows or
+      // prices, and so a just-written resolution is what the gate sees.
+      const params = buildTraverseParams({ currencyIds, origin, destination, cabin });
+      const { rows } = await runTraversal(params);
+      const candidateList: CandidateRouting[] = toCandidates(rows as TraverseRow[]);
       const input: SolveInput = {
         origin,
         destination,
@@ -439,9 +455,9 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(
       {
         disabled: true,
-        reason: "MODEL_PROVIDER_API_KEY not set",
+        reason: "no model provider configured",
         message:
-          "The agent (model) path is disabled because MODEL_PROVIDER_API_KEY is not set. Use the model-free /solver path, which needs no API key and returns the same answer.",
+          "The agent (model) path is disabled because no model provider is configured. Set MODEL_PROVIDER=bedrock (AWS credentials, no API key) or set MODEL_PROVIDER=openai|anthropic with MODEL_PROVIDER_API_KEY. Meanwhile use the model-free /solver path, which needs no model and returns the same answer.",
         solverPath: "/solver",
       },
       { status: 200 },

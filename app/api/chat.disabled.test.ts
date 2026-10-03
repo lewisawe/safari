@@ -26,6 +26,26 @@ const createMCPClient = vi.fn(() => {
 });
 vi.mock("@ai-sdk/mcp", () => ({ createMCPClient: () => createMCPClient() }));
 
+// Bedrock is enabled without any API key. The streamText call is stubbed so the
+// enabled-path test never reaches AWS (no network, no credentials read).
+const streamText = vi.fn(() => ({
+  toUIMessageStreamResponse: () => new Response("stream", { status: 200 }),
+}));
+vi.mock("ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("ai")>();
+  return { ...actual, streamText: (...args: unknown[]) => streamText(...(args as [])) };
+});
+const bedrockModel = vi.fn((id: string) => ({ provider: "bedrock-mock", modelId: id }));
+const createAmazonBedrock = vi.fn(() => bedrockModel);
+vi.mock("@ai-sdk/amazon-bedrock", () => ({
+  createAmazonBedrock: (...args: unknown[]) => createAmazonBedrock(...(args as [])),
+}));
+vi.mock("@aws-sdk/credential-providers", () => ({
+  fromNodeProviderChain: () => async () => {
+    throw new Error("credentials must NOT be resolved in tests");
+  },
+}));
+
 import { POST as chatPOST } from "./chat/route";
 
 function jsonRequest(body: unknown): Request {
@@ -36,17 +56,23 @@ function jsonRequest(body: unknown): Request {
   });
 }
 
+const ENV_KEYS = ["MODEL_PROVIDER_API_KEY", "MODEL_PROVIDER", "MODEL_NAME"] as const;
+const prevEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
+
+function restoreEnv(): void {
+  for (const k of ENV_KEYS) {
+    const v = prevEnv[k];
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+}
+
 describe("chat route — NFR-3 disabled path (no model key)", () => {
-  const prevKey = process.env.MODEL_PROVIDER_API_KEY;
-
   beforeEach(() => {
-    delete process.env.MODEL_PROVIDER_API_KEY;
+    for (const k of ENV_KEYS) delete process.env[k];
   });
 
-  afterEach(() => {
-    if (prevKey === undefined) delete process.env.MODEL_PROVIDER_API_KEY;
-    else process.env.MODEL_PROVIDER_API_KEY = prevKey;
-  });
+  afterEach(restoreEnv);
 
   it("returns a typed { disabled: true } JSON that points to /solver, and leaks no price", async () => {
     const res = await chatPOST(
@@ -98,5 +124,36 @@ describe("chat route — NFR-3 disabled path (no model key)", () => {
       delete process.env.SANITY_CONTEXT_TOKEN;
       delete process.env.SANITY_KB_ID;
     }
+  });
+});
+
+describe("chat route — MODEL_PROVIDER=bedrock (no API key needed)", () => {
+  beforeEach(() => {
+    for (const k of ENV_KEYS) delete process.env[k];
+    delete process.env.SANITY_CONTEXT_MCP_URL;
+    delete process.env.SANITY_CONTEXT_TOKEN;
+    delete process.env.SANITY_KB_ID;
+    process.env.MODEL_PROVIDER = "bedrock";
+    streamText.mockClear();
+    createAmazonBedrock.mockClear();
+    bedrockModel.mockClear();
+  });
+
+  afterEach(restoreEnv);
+
+  it("is NOT disabled without MODEL_PROVIDER_API_KEY and streams via the Nova Pro default", async () => {
+    const res = await chatPOST(jsonRequest({ messages: [] }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type") ?? "").not.toContain("application/json");
+    expect(await res.text()).toBe("stream");
+    expect(createAmazonBedrock).toHaveBeenCalledTimes(1);
+    expect(bedrockModel).toHaveBeenCalledWith("us.amazon.nova-pro-v1:0");
+    expect(streamText).toHaveBeenCalledTimes(1);
+  });
+
+  it("honors MODEL_NAME for the Bedrock model id", async () => {
+    process.env.MODEL_NAME = "us.amazon.nova-lite-v1:0";
+    await chatPOST(jsonRequest({ messages: [] }));
+    expect(bedrockModel).toHaveBeenCalledWith("us.amazon.nova-lite-v1:0");
   });
 });

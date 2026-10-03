@@ -15,10 +15,12 @@
     "check-context": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/check-context.ts"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "5.0.105",
     "@ai-sdk/anthropic": "^4",
     "@ai-sdk/mcp": "2.0.66",
     "@ai-sdk/openai": "^4",
     "@ai-sdk/react": "^4",
+    "@aws-sdk/credential-providers": "3.1146.0",
     "@sanity/client": "^8.9",
     "ai": "^7",
     "next": "^16.3",

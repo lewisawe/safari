@@ -267,13 +267,25 @@ function MessageView({ message }: { message: UIMessage }) {
   );
 }
 
+/**
+ * Amazon Nova emits its chain of thought as `<thinking>…</thinking>` inside the
+ * text stream. Hide complete blocks and a still-open trailing block (mid-stream).
+ */
+function stripThinking(text: string): string {
+  return text
+    .replace(/<thinking>[\s\S]*?<\/thinking>/g, "")
+    .replace(/<thinking>[\s\S]*$/, "")
+    .trim();
+}
+
 function PartView({ part }: { part: MessagePart }) {
   // Free text = narration only (NEVER a price slot).
   if (part.type === "text") {
-    if (!part.text) return null;
+    const text = stripThinking(part.text ?? "");
+    if (!text) return null;
     return (
       <p className="m-0 whitespace-pre-wrap font-[family-name:var(--font-jobytext)] text-[length:var(--text-body)] font-[450] leading-[var(--leading-body)] tracking-[var(--tracking-body)] text-[var(--color-carbon-ink)]">
-        {part.text}
+        {text}
       </p>
     );
   }
