@@ -24,6 +24,7 @@ import {
   KB_DEFAULT_TERMS,
   parseKbOutline,
   pickRelevantPaths,
+  programKbTerms,
   type KbOutline,
 } from "./kbOutline";
 
@@ -65,20 +66,32 @@ export function extractCitations(markdown: string): { text: string; url: string 
 /**
  * The deterministic (no-LLM) KB entry selection shared by POST /api/kb and the
  * agent's server-side KB read: parse the outline, match the default terms plus
- * the request's route and program codes. Pure.
+ * the request's route and program names. Pure.
+ *
+ * Route first: when any outline entry names the requested origin or
+ * destination, only those entries are candidates, so a JFK→LHR request reads
+ * the JFK→LHR entry and not the SFO→NRT one (which shares "chart" and other
+ * generic terms). An outline with no route-specific entries (topical KBs)
+ * falls back to ranking every entry.
  */
 export function selectKbEntries(
   outlineText: string,
   req: KbEvidenceRequest,
 ): { outline: KbOutline; paths: string[] } {
   const outline = parseKbOutline(outlineText);
+  const routeTerms = [req.origin, req.destination].filter(
+    (t) => typeof t === "string" && t.trim() !== "",
+  );
   const terms = [
     ...KB_DEFAULT_TERMS,
-    req.origin,
-    req.destination,
-    ...(req.programCodes ?? []),
+    ...routeTerms,
+    ...(req.programCodes ?? []).flatMap(programKbTerms),
   ];
-  return { outline, paths: pickRelevantPaths(outline.entries, terms) };
+  const onRoute = outline.entries.filter(
+    (e) => pickRelevantPaths([e], routeTerms, 1).length > 0,
+  );
+  const pool = onRoute.length > 0 ? onRoute : outline.entries;
+  return { outline, paths: pickRelevantPaths(pool, terms) };
 }
 
 export async function readKbEvidence(req: KbEvidenceRequest): Promise<KbEvidence> {

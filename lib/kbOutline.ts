@@ -3,8 +3,9 @@
 // Pure, deterministic parsing of a Sanity Context Knowledge Base outline (the
 // `initial_context` text) and keyword-based entry selection. NO LLM: the
 // keyless /solver path picks which KB entries to read by matching outline
-// lines against fixed terms (ANA / SFO / NRT / chart / devaluation, plus the
-// request's own route and program codes).
+// lines against fixed generic terms (chart / devaluation / blog) plus the
+// request's own route and program names (see lib/kbEvidence.ts
+// selectKbEntries, which prefers entries about the requested route).
 //
 // The exact outline line format is not documented, so the parser is tolerant:
 // an entry is any line carrying a path token (a backticked token, else the
@@ -23,7 +24,25 @@ export interface KbOutline {
   entries: KbOutlineEntry[];
 }
 
-export const KB_DEFAULT_TERMS = ["ANA", "SFO", "NRT", "chart", "devaluation"];
+/** Route-independent terms: the kinds of sources a contradiction cites. */
+export const KB_DEFAULT_TERMS = ["chart", "devaluation", "blog"];
+
+/**
+ * KB search terms per program code. Bare two-letter codes make poor keywords
+ * ("VS" hits "chart vs notice", "BA"/"AC" hit "base"/"accrual"), so programs
+ * are matched by name. Unknown codes fall back to the code itself.
+ */
+export const PROGRAM_KB_TERMS: Record<string, string[]> = {
+  ANA: ["ANA"],
+  VS: ["Virgin"],
+  AC: ["Aeroplan", "Air Canada"],
+  BA: ["British Airways", "british_airways", "british-airways"],
+  AV: ["Avianca", "LifeMiles"],
+};
+
+export function programKbTerms(code: string): string[] {
+  return PROGRAM_KB_TERMS[code] ?? [code];
+}
 
 function extractPath(line: string): { path: string; rest: string } | null {
   const tick = /`([^`\s]+)`/.exec(line);

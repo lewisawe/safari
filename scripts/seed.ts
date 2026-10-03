@@ -16,12 +16,25 @@
 // Source excerpts (Sanity Context Knowledge Base): every source carries a short
 // SYNTHETIC prose `excerpt`. A Knowledge Base built from this dataset reads
 // them, so it can detect the 85,000 (printed chart) vs 90,000 (devaluation
-// notice, effective 2026-09-25) conflict on ANA SFO→NRT business. The numbers
-// match the chart entries and claims exactly. Excerpts are evidence only; the
-// solver never reads them.
+// notice, effective 2026-09-25) conflict on ANA SFO→NRT business, and the
+// 25,000 (official chart) vs 20,000 (points blog) conflict on Virgin Atlantic
+// JFK→LHR economy. The numbers match the chart entries and claims exactly.
+// Excerpts are evidence only; the solver never reads them.
+//
+// Extra routes (all SYNTHETIC) so the demo works for more than one trip:
+//   • JFK→LHR business, Capital One only: BA 60,000 beats AV 52,000 because
+//     Capital One → LifeMiles is 2:1.5 (52,000 / 0.75 = 69,334 of your miles).
+//   • LAX→SYD business, Chase + Capital One: AC 90,000 beats AV 104,000.
+//   • JFK→LHR economy, Amex: blog (aggregator, newer) vs chart (official);
+//     authority beats recency, so the chart's 25,000 stands.
+//   • SFO→NRT first, Chase only: no valid routing (only ANA prices it).
 
 import { createClient } from "@sanity/client";
-import { DEMO_CONTRADICTION_ID, DEMO_USER_DECISION_ID } from "../lib/demoReset";
+import {
+  DEMO_CONTRADICTION_ID,
+  DEMO_CONTRADICTION_IDS,
+  demoUserDecisionId,
+} from "../lib/demoReset";
 
 // ----------------------------------------------------------------------------
 // 0. Fail-closed env check (before any client / any write).
@@ -65,11 +78,16 @@ const client = createClient({
 
 const ref = (id: string) => ({ _type: "reference" as const, _ref: id });
 
-// Deterministic ids for the gate (the contradiction and its derived
-// carry-forward decision). Shared with POST /api/demo/reset via
+// Deterministic ids for the gates (the contradictions and their derived
+// carry-forward decisions). Shared with POST /api/demo/reset via
 // lib/demoReset.ts, which only holds constants and a type import.
 const CONTRADICTION_ID = DEMO_CONTRADICTION_ID;
-const USER_DECISION_ID = DEMO_USER_DECISION_ID;
+const VS_CONTRADICTION_ID = "contra.vs.jfklhr.economy";
+for (const id of [CONTRADICTION_ID, VS_CONTRADICTION_ID]) {
+  if (!(DEMO_CONTRADICTION_IDS as readonly string[]).includes(id)) {
+    fail(`internal: ${id} is missing from DEMO_CONTRADICTION_IDS.`);
+  }
+}
 
 // ----------------------------------------------------------------------------
 // §5.1 Currencies
@@ -90,6 +108,13 @@ const currencies = [
     name: "Chase Ultimate Rewards",
     synthetic: true,
   },
+  {
+    _id: "cur.capone",
+    _type: "pointsCurrency",
+    code: "CAPONE",
+    name: "Capital One Miles",
+    synthetic: true,
+  },
 ];
 
 // ----------------------------------------------------------------------------
@@ -100,6 +125,8 @@ const programs = [
   { _id: "prog.ana", _type: "program", code: "ANA", name: "ANA Mileage Club", synthetic: true },
   { _id: "prog.vs", _type: "program", code: "VS", name: "Virgin Atlantic Flying Club", synthetic: true },
   { _id: "prog.ac", _type: "program", code: "AC", name: "Air Canada Aeroplan", synthetic: true },
+  { _id: "prog.av", _type: "program", code: "AV", name: "Avianca LifeMiles", synthetic: true },
+  { _id: "prog.ba", _type: "program", code: "BA", name: "British Airways Executive Club", synthetic: true },
 ];
 
 // ----------------------------------------------------------------------------
@@ -115,7 +142,7 @@ const sources = [
     publishedDate: "2025-01-15T00:00:00.000Z",
     url: "https://example.invalid/ana-chart",
     excerpt:
-      "SYNTHETIC — not real award pricing. ANA Mileage Club partner award chart (printed edition, published 2025-01-15). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 85,000 points. Taxes and carrier surcharges are collected separately at booking.",
+      "SYNTHETIC — not real award pricing. ANA Mileage Club partner award chart (printed edition, published 2025-01-15). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 85,000 points. Same route, economy: 35,000 points; first class: 110,000 points. Taxes and carrier surcharges are collected separately at booking.",
     synthetic: true,
   },
   {
@@ -137,7 +164,7 @@ const sources = [
     publishedDate: "2025-03-01T00:00:00.000Z",
     url: "https://example.invalid/vs-chart",
     excerpt:
-      "SYNTHETIC — not real award pricing. Virgin Atlantic Flying Club partner chart (published 2025-03-01). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 95,000 points.",
+      "SYNTHETIC — not real award pricing. Virgin Atlantic Flying Club partner chart (published 2025-03-01). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 95,000 points. New York (JFK) to London Heathrow (LHR), one-way: economy 25,000 points; business 57,500 points.",
     synthetic: true,
   },
   {
@@ -148,7 +175,7 @@ const sources = [
     publishedDate: "2025-02-10T00:00:00.000Z",
     url: "https://example.invalid/ac-chart",
     excerpt:
-      "SYNTHETIC — not real award pricing. Air Canada Aeroplan partner chart (published 2025-02-10). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 105,000 points.",
+      "SYNTHETIC — not real award pricing. Air Canada Aeroplan partner chart (published 2025-02-10). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 105,000 points. Same route, economy: 37,500 points. Business class, Los Angeles (LAX) to Sydney (SYD), one-way: 90,000 points.",
     synthetic: true,
   },
   {
@@ -159,7 +186,40 @@ const sources = [
     publishedDate: "2026-01-01T00:00:00.000Z",
     url: "https://example.invalid/transfer-ratios",
     excerpt:
-      "SYNTHETIC — not real transfer terms. Transfer partner ratio table (2026-01-01): Amex Membership Rewards → ANA Mileage Club 1:1 (about 48 hours to post); Amex Membership Rewards → Virgin Atlantic Flying Club 1:1 (instant); Chase Ultimate Rewards → Virgin Atlantic Flying Club 1:1 (instant); Chase Ultimate Rewards → Air Canada Aeroplan 1:1 (instant).",
+      "SYNTHETIC — not real transfer terms. Transfer partner ratio table (2026-01-01): Amex Membership Rewards → ANA Mileage Club 1:1 (about 48 hours to post); Amex Membership Rewards → Virgin Atlantic Flying Club 1:1 (instant); Amex Membership Rewards → British Airways Executive Club 1:1 (instant); Chase Ultimate Rewards → Virgin Atlantic Flying Club 1:1 (instant); Chase Ultimate Rewards → Air Canada Aeroplan 1:1 (instant); Chase Ultimate Rewards → British Airways Executive Club 1:1 (instant); Capital One Miles → Avianca LifeMiles 2:1.5, i.e. 2 Capital One miles become 1.5 LifeMiles (0.75 per mile, about 24 hours to post); Capital One Miles → British Airways Executive Club 1:1 (instant).",
+    synthetic: true,
+  },
+  {
+    _id: "src.ba.chart",
+    _type: "source",
+    title: "British Airways Award Chart",
+    authority: "official-program",
+    publishedDate: "2025-04-01T00:00:00.000Z",
+    url: "https://example.invalid/ba-chart",
+    excerpt:
+      "SYNTHETIC — not real award pricing. British Airways Executive Club award chart (published 2025-04-01). New York (JFK) to London Heathrow (LHR), one-way: economy 26,000 points; business 60,000 points.",
+    synthetic: true,
+  },
+  {
+    _id: "src.av.chart",
+    _type: "source",
+    title: "Avianca LifeMiles Award Chart",
+    authority: "official-program",
+    publishedDate: "2025-05-01T00:00:00.000Z",
+    url: "https://example.invalid/av-chart",
+    excerpt:
+      "SYNTHETIC — not real award pricing. Avianca LifeMiles partner award chart (published 2025-05-01). New York (JFK) to London Heathrow (LHR), one-way: economy 22,000 LifeMiles; business 52,000 LifeMiles. Los Angeles (LAX) to Sydney (SYD), business, one-way: 78,000 LifeMiles.",
+    synthetic: true,
+  },
+  {
+    _id: "src.vs.blog",
+    _type: "source",
+    title: "Points Blog: Virgin Atlantic Award Sale",
+    authority: "aggregator",
+    publishedDate: "2026-09-28T00:00:00.000Z",
+    url: "https://example.invalid/points-blog-vs-sale",
+    excerpt:
+      "SYNTHETIC — not real award pricing. A points blog post (2026-09-28) reports a Virgin Atlantic Flying Club sale: New York (JFK) to London Heathrow (LHR) economy for 20,000 points one-way. This is a third-party report, not the official Virgin Atlantic chart, which lists 25,000 points.",
     synthetic: true,
   },
 ];
@@ -204,6 +264,47 @@ const transferPartners = [
     _type: "transferPartner",
     fromCurrency: ref("cur.chase"),
     toProgram: ref("prog.ac"),
+    ratio: 1.0,
+    transferTimeHours: 0,
+    sourceRef: ref("src.transfer"),
+    synthetic: true,
+  },
+  {
+    _id: "tp.amex.ba",
+    _type: "transferPartner",
+    fromCurrency: ref("cur.amex"),
+    toProgram: ref("prog.ba"),
+    ratio: 1.0,
+    transferTimeHours: 0,
+    sourceRef: ref("src.transfer"),
+    synthetic: true,
+  },
+  {
+    _id: "tp.chase.ba",
+    _type: "transferPartner",
+    fromCurrency: ref("cur.chase"),
+    toProgram: ref("prog.ba"),
+    ratio: 1.0,
+    transferTimeHours: 0,
+    sourceRef: ref("src.transfer"),
+    synthetic: true,
+  },
+  {
+    // 2 Capital One miles -> 1.5 LifeMiles: 0.75 program points per mile.
+    _id: "tp.capone.av",
+    _type: "transferPartner",
+    fromCurrency: ref("cur.capone"),
+    toProgram: ref("prog.av"),
+    ratio: 0.75,
+    transferTimeHours: 24,
+    sourceRef: ref("src.transfer"),
+    synthetic: true,
+  },
+  {
+    _id: "tp.capone.ba",
+    _type: "transferPartner",
+    fromCurrency: ref("cur.capone"),
+    toProgram: ref("prog.ba"),
     ratio: 1.0,
     transferTimeHours: 0,
     sourceRef: ref("src.transfer"),
@@ -258,6 +359,61 @@ const chartEntries = [
 ];
 
 // ----------------------------------------------------------------------------
+// Extra award-chart entries (SYNTHETIC) — more trips for the demo.
+// ----------------------------------------------------------------------------
+
+function entry(
+  _id: string,
+  program: string,
+  origin: string,
+  destination: string,
+  cabin: "economy" | "premium" | "business" | "first",
+  pointsCost: number,
+  taxesUsd: number,
+  source: string,
+  effectiveDate: string,
+) {
+  return {
+    _id,
+    _type: "awardChartEntry",
+    program: ref(program),
+    origin,
+    destination,
+    cabin,
+    pointsCost,
+    taxesUsd,
+    sourceRef: ref(source),
+    effectiveDate,
+    synthetic: true,
+  };
+}
+
+const ANA_DATE = "2025-01-15T00:00:00.000Z";
+const VS_DATE = "2025-03-01T00:00:00.000Z";
+const AC_DATE = "2025-02-10T00:00:00.000Z";
+const BA_DATE = "2025-04-01T00:00:00.000Z";
+const AV_DATE = "2025-05-01T00:00:00.000Z";
+
+const extraChartEntries = [
+  // SFO→NRT economy and first (first: ANA only, so Chase alone has no routing).
+  entry("ace.ana.sfonrt.economy", "prog.ana", "SFO", "NRT", "economy", 35000, 90, "src.ana.chart", ANA_DATE),
+  entry("ace.ac.sfonrt.economy", "prog.ac", "SFO", "NRT", "economy", 37500, 110, "src.ac.chart", AC_DATE),
+  entry("ace.ana.sfonrt.first", "prog.ana", "SFO", "NRT", "first", 110000, 500, "src.ana.chart", ANA_DATE),
+  // JFK→LHR economy. The VS entry stores claim A (the official chart), the
+  // same pattern as ace.ana storing 85,000; its contradiction gates it.
+  entry("ace.vs.jfklhr.economy", "prog.vs", "JFK", "LHR", "economy", 25000, 120, "src.vs.chart", VS_DATE),
+  entry("ace.ba.jfklhr.economy", "prog.ba", "JFK", "LHR", "economy", 26000, 110, "src.ba.chart", BA_DATE),
+  entry("ace.av.jfklhr.economy", "prog.av", "JFK", "LHR", "economy", 22000, 60, "src.av.chart", AV_DATE),
+  // JFK→LHR business: AV has fewer program points but loses on Capital One.
+  entry("ace.ba.jfklhr.business", "prog.ba", "JFK", "LHR", "business", 60000, 450, "src.ba.chart", BA_DATE),
+  entry("ace.av.jfklhr.business", "prog.av", "JFK", "LHR", "business", 52000, 180, "src.av.chart", AV_DATE),
+  entry("ace.vs.jfklhr.business", "prog.vs", "JFK", "LHR", "business", 57500, 420, "src.vs.chart", VS_DATE),
+  // LAX→SYD business.
+  entry("ace.ac.laxsyd.business", "prog.ac", "LAX", "SYD", "business", 90000, 250, "src.ac.chart", AC_DATE),
+  entry("ace.av.laxsyd.business", "prog.av", "LAX", "SYD", "business", 78000, 200, "src.av.chart", AV_DATE),
+];
+
+// ----------------------------------------------------------------------------
 // §5.6 The engineered contradiction — THE gate.
 // Written with NO committedResolution field (absence = unresolved signal).
 // ----------------------------------------------------------------------------
@@ -288,6 +444,35 @@ const contradictionDoc = {
   synthetic: true,
 };
 
+// Second gate: a newer points-blog report undercuts the official chart.
+// Precedence picks claim A (official-program outranks aggregator), so the
+// gate does not simply take the newer or the cheaper number.
+const vsContradictionDoc = {
+  _id: VS_CONTRADICTION_ID,
+  _type: "contradiction",
+  title: "Virgin Atlantic JFK→LHR Economy: 25k chart vs 20k blog report",
+  subjectEntry: ref("ace.vs.jfklhr.economy"),
+  claimA: {
+    _type: "claim",
+    pointsCost: 25000,
+    source: ref("src.vs.chart"),
+    effectiveDate: VS_DATE,
+    label: "Official award chart",
+  },
+  claimB: {
+    _type: "claim",
+    pointsCost: 20000,
+    source: ref("src.vs.blog"),
+    effectiveDate: "2026-09-28T00:00:00.000Z",
+    label: "Points blog sale report",
+  },
+  explanation:
+    "The official Virgin Atlantic chart lists JFK→LHR economy at 25k, but a points blog reported a 20k sale on 2026-09-28. The blog is newer, yet it is a third-party aggregator, so the official chart outranks it.",
+  status: "unresolved",
+  // committedResolution: intentionally omitted — absence is the unresolved signal (§4.6).
+  synthetic: true,
+};
+
 // ----------------------------------------------------------------------------
 // Run
 // ----------------------------------------------------------------------------
@@ -302,7 +487,9 @@ async function seed(): Promise<void> {
     ...sources,
     ...transferPartners,
     ...chartEntries,
+    ...extraChartEntries,
     contradictionDoc,
+    vsContradictionDoc,
   ];
 
   // createOrReplace every doc in one transaction so the import is idempotent
@@ -311,10 +498,13 @@ async function seed(): Promise<void> {
   for (const doc of allDocs) {
     tx = tx.createOrReplace(doc);
   }
-  // Reset the gate: delete any derived userDecision so a fresh seed always
+  // Reset the gates: delete any derived userDecision so a fresh seed always
   // restores the always-fires demo state (§5.6, §7.4). delete is a no-op if
   // the doc does not exist.
-  tx = tx.delete(USER_DECISION_ID);
+  // Covers every demo contradiction (same fixed ids as POST /api/demo/reset).
+  for (const id of DEMO_CONTRADICTION_IDS) {
+    tx = tx.delete(demoUserDecisionId(id));
+  }
 
   await tx.commit();
 
@@ -322,7 +512,7 @@ async function seed(): Promise<void> {
     `[seed] Imported ${allDocs.length} synthetic docs to project ${projectId}, dataset "${dataset}".`,
   );
   console.log(
-    `[seed] Reset gate: deleted ${USER_DECISION_ID} and wrote ${CONTRADICTION_ID} with no committedResolution (unresolved).`,
+    `[seed] Reset gates: deleted ${DEMO_CONTRADICTION_IDS.map(demoUserDecisionId).join(", ")} and wrote ${DEMO_CONTRADICTION_IDS.join(", ")} with no committedResolution (unresolved).`,
   );
 }
 

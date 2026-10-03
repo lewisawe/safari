@@ -47,6 +47,7 @@ import type { KbEvidence } from "@/lib/kbEvidence";
 import { agentKbToEvidence, kbToolOutputToEvidence } from "@/lib/kbToolEvidence";
 import { stripThinkingText } from "@/lib/stripThinking";
 import { ResetDemoButton } from "@/components/ResetDemoButton";
+import { EXAMPLE_CHIP_CLASS, EXAMPLE_TRIPS } from "@/lib/examples";
 
 // --- Narrow local mirrors of the tool-result shapes (from /api/chat tools) ---
 
@@ -106,8 +107,8 @@ interface MessagePart {
   output?: unknown;
 }
 
-const SAMPLE_PROMPT =
-  "SFO to NRT in business. I hold Amex MR (cur.amex) and Chase UR (cur.chase). Find the cheapest valid routing and prove it.";
+// The first example is the SFO→NRT gate demo (same text as before).
+const SAMPLE_PROMPT = EXAMPLE_TRIPS[0].prompt;
 
 /** The typed `{ disabled: true }` payload /api/chat returns instead of a stream. */
 interface DisabledState {
@@ -258,9 +259,29 @@ export default function AgentPage() {
         </section>
       ) : null}
 
+      {/* Example prompts: a chip fills the textarea and never sends. */}
+      <div
+        role="group"
+        aria-label="Example questions"
+        className="mt-[var(--spacing-40)] flex flex-wrap gap-[var(--spacing-8)]"
+      >
+        {EXAMPLE_TRIPS.map((ex) => (
+          <button
+            key={ex.label}
+            type="button"
+            title={ex.hint}
+            disabled={busy || Boolean(modelDisabled?.disabled)}
+            onClick={() => setInput(ex.prompt)}
+            className={EXAMPLE_CHIP_CLASS}
+          >
+            {ex.label}
+          </button>
+        ))}
+      </div>
+
       <form
         onSubmit={onSubmit}
-        className="mt-[var(--spacing-40)] flex flex-col items-stretch gap-[var(--spacing-16)] sm:flex-row sm:items-start"
+        className="mt-[var(--spacing-16)] flex flex-col items-stretch gap-[var(--spacing-16)] sm:flex-row sm:items-start"
       >
         <textarea
           value={input}

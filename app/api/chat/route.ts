@@ -259,6 +259,7 @@ function getModel(): LanguageModel | null {
 const SYSTEM_PROMPT = [
   "You are Safari, an award-travel routing agent over a SYNTHETIC dataset in Sanity.",
   "The dataset is synthetic; say so if the user asks whether it is real.",
+  "Point currency ids: cur.amex (American Express Membership Rewards), cur.chase (Chase Ultimate Rewards), cur.capone (Capital One Miles). Use only the ids for currencies the user says they hold.",
   "",
   "Hard rules (fail-closed — never break these):",
   "1. You may ONLY state a points cost or a routing verdict that appears in a `runSolver` COMPUTED result. If `runSolver` returns NOT_COMPUTED, report its `message` verbatim and STOP. Never compute, estimate, round, or guess a number yourself.",
@@ -304,7 +305,7 @@ const traverseRoutings = tool({
   inputSchema: z.object({
     currencyIds: z
       .array(z.string())
-      .describe("pointsCurrency _ids the user holds, e.g. ['cur.amex','cur.chase']"),
+      .describe("pointsCurrency _ids the user holds, one or more of 'cur.amex' (Amex MR), 'cur.chase' (Chase UR), 'cur.capone' (Capital One Miles)"),
     origin: z.string().describe("origin IATA code, e.g. SFO"),
     destination: z.string().describe("destination IATA code, e.g. NRT"),
     cabin: z.enum(CABIN_VALUES).describe("cabin class"),
@@ -383,7 +384,7 @@ const readContradictions = tool({
 
 const readKnowledgeBase = tool({
   description:
-    "Sanity Context MCP Knowledge Base mode: read KB entries by EXACT path, taken from the Knowledge Base outline in the system prompt (e.g. the entry about the contradicted ANA routing). Evidence and citation only: it NEVER supplies a price and NEVER gates pricing.",
+    "Sanity Context MCP Knowledge Base mode: read KB entries by EXACT path, taken from the Knowledge Base outline in the system prompt (e.g. the entry about a contradicted routing). Evidence and citation only: it NEVER supplies a price and NEVER gates pricing.",
   inputSchema: z.object({
     paths: z
       .array(z.string())

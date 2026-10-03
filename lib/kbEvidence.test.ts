@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const createMCPClient = vi.fn();
 vi.mock("@ai-sdk/mcp", () => ({ createMCPClient: (...a: unknown[]) => createMCPClient(...a) }));
 
-import { readKbEvidence, extractCitations } from "./kbEvidence";
+import { readKbEvidence, extractCitations, selectKbEntries } from "./kbEvidence";
 
 const OUTLINE = [
   "# Safari KB (synthetic)",
@@ -89,5 +89,54 @@ describe("extractCitations", () => {
     expect(
       extractCitations("[a](https://x.invalid/a) [a](https://x.invalid/a) [b](javascript:alert(1))"),
     ).toEqual([{ text: "a", url: "https://x.invalid/a" }]);
+  });
+});
+
+// Both seeded contradictions, as a rebuilt KB might list them (mocked).
+const TWO_ROUTE_OUTLINE = [
+  "# Safari KB (synthetic)",
+  "- `sources/ana-devaluation-notice.md` [core] — ANA devaluation notice: SFO→NRT business 90,000 effective 2026-09-25",
+  "- `sources/ana-award-chart.md` [core] — ANA printed award chart: SFO→NRT business 85,000",
+  "- `programs/virgin-atlantic-chart.md` [core] — Virgin Atlantic partner chart: SFO→NRT business 95,000; JFK→LHR economy 25,000",
+  "- `sources/points-blog-vs-sale.md` — Points blog: Virgin Atlantic JFK→LHR economy sale 20,000",
+  "- `programs/british-airways-chart.md` — British Airways award chart: JFK→LHR economy 26,000",
+  "- `transfers/transfer-ratios.md` [peripheral] — Transfer partner ratio table (Amex MR, Chase UR, Capital One)",
+].join("\n");
+
+describe("selectKbEntries (route-aware)", () => {
+  it("JFK→LHR with the contradicted VS program picks the JFK→LHR entries, not the ANA ones", () => {
+    const { paths } = selectKbEntries(TWO_ROUTE_OUTLINE, {
+      origin: "JFK",
+      destination: "LHR",
+      programCodes: ["VS"],
+    });
+    expect(paths.slice(0, 2)).toEqual([
+      "programs/virgin-atlantic-chart.md",
+      "sources/points-blog-vs-sale.md",
+    ]);
+    expect(paths).not.toContain("sources/ana-devaluation-notice.md");
+    expect(paths).not.toContain("sources/ana-award-chart.md");
+  });
+
+  it("SFO→NRT with ANA still picks the ANA entries first and no JFK→LHR-only entry", () => {
+    const { paths } = selectKbEntries(TWO_ROUTE_OUTLINE, {
+      origin: "SFO",
+      destination: "NRT",
+      programCodes: ["ANA"],
+    });
+    expect(paths.slice(0, 2)).toEqual([
+      "sources/ana-devaluation-notice.md",
+      "sources/ana-award-chart.md",
+    ]);
+    expect(paths).not.toContain("sources/points-blog-vs-sale.md");
+    expect(paths).not.toContain("programs/british-airways-chart.md");
+  });
+
+  it("a bare 'VS' code does not match 'old notice vs new notice' prose", () => {
+    const { paths } = selectKbEntries(
+      "# KB\n- `a/conflict.md` — old notice vs new notice\n- `b/virgin.md` — Virgin Atlantic JFK→LHR",
+      { origin: "XXX", destination: "YYY", programCodes: ["VS"] },
+    );
+    expect(paths).toEqual(["b/virgin.md"]);
   });
 });

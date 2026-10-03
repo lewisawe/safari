@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { DEMO_CONTRADICTION_ID, DEMO_USER_DECISION_ID, resetDemoGate, type ResetClient } from "./demoReset";
+import {
+  DEMO_CONTRADICTION_ID,
+  DEMO_CONTRADICTION_IDS,
+  DEMO_USER_DECISION_ID,
+  resetDemoGate,
+  type ResetClient,
+} from "./demoReset";
 
 /** Records every mutation a transaction would commit. */
 function recordingClient() {
@@ -40,7 +46,7 @@ function recordingClient() {
 }
 
 describe("resetDemoGate", () => {
-  it("issues exactly two mutations on the two fixed ids, in one transaction", async () => {
+  it("resets BOTH contradictions (four mutations on fixed ids) in one transaction", async () => {
     const { client, committed } = recordingClient();
     await resetDemoGate(client);
     expect(committed).toHaveLength(1);
@@ -50,11 +56,20 @@ describe("resetDemoGate", () => {
         patch: "contra.ana.sfonrt.business",
         ops: [{ unset: ["committedResolution"] }, { set: { status: "unresolved" } }],
       },
+      { delete: "userDecision.contra.vs.jfklhr.economy" },
+      {
+        patch: "contra.vs.jfklhr.economy",
+        ops: [{ unset: ["committedResolution"] }, { set: { status: "unresolved" } }],
+      },
     ]);
   });
 
   it("uses the same ids as the seed's gate reset", () => {
     expect(DEMO_CONTRADICTION_ID).toBe("contra.ana.sfonrt.business");
     expect(DEMO_USER_DECISION_ID).toBe(`userDecision.${DEMO_CONTRADICTION_ID}`);
+    expect([...DEMO_CONTRADICTION_IDS]).toEqual([
+      "contra.ana.sfonrt.business",
+      "contra.vs.jfklhr.economy",
+    ]);
   });
 });

@@ -97,6 +97,18 @@ pipeline straight-line and returns **Amex MR → ANA, 90,000** with the proof
 (VS 95k, VS 95k, AC 105k ascending). The agent path (`/agent`) returns the same
 answer when a model key is set.
 
+### Try these
+
+Each is a chip on `/solver` and `/agent` that fills the form (synthetic data):
+
+- **SFO→NRT business · Amex + Chase**: the gate demo. The devaluation notice (90,000) overrides the printed chart; Amex → ANA wins.
+- **JFK→LHR business · Capital One**: fewer points can lose. AV is 52,000 LifeMiles but costs 69,334 Capital One miles at 2:1.5, so BA 60,000 wins.
+- **JFK→LHR economy · Amex**: a newer points blog (20,000) vs the official chart (25,000). Authority beats recency; VS 25,000 beats BA 26,000.
+- **LAX→SYD business · Chase + Capital One**: AC 90,000 via Chase beats AV 104,000 via Capital One.
+- **SFO→NRT first · Chase**: no valid routing, shown as such instead of a guess.
+
+"Reset demo" puts both contradictions back to unresolved.
+
 ---
 
 ## Verify (offline, no network, no key)

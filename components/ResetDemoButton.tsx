@@ -3,7 +3,7 @@
 /**
  * components/ResetDemoButton.tsx — quiet outlined "Reset demo" action.
  *
- * POSTs /api/demo/reset, which puts the 85k vs 90k contradiction back to
+ * POSTs /api/demo/reset, which puts both seeded contradictions back to
  * unresolved (same gate reset as the seed) so the next visitor sees the gate
  * fire instead of "carried forward". `onReset` runs after a successful reset
  * (the /solver page clears its results there).
@@ -49,10 +49,10 @@ export function ResetDemoButton({
 
   const note =
     status.kind === "done"
-      ? "Done. The contradiction is unresolved again, so the gate will fire on the next run."
+      ? "Done. Both contradictions are unresolved again, so the gate will fire on the next run."
       : status.kind === "error"
         ? status.message
-        : "Puts the 85k vs 90k contradiction back to unresolved so the gate fires again.";
+        : "Puts both seeded contradictions (ANA 85k vs 90k, VS 25k vs 20k) back to unresolved so the gate fires again.";
 
   return (
     <div className="flex flex-col items-start gap-[var(--spacing-8)] sm:flex-row sm:items-center sm:gap-[var(--spacing-16)]">

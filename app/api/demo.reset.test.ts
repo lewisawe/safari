@@ -47,7 +47,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/demo/reset", () => {
-  it("returns { ok: true } and touches only the two fixed ids, ignoring the body", async () => {
+  it("returns { ok: true } and touches only the fixed ids of both contradictions, ignoring the body", async () => {
     const res = await reset("198.51.100.1", { contradictionId: "something.else", id: "x" });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
@@ -55,6 +55,8 @@ describe("POST /api/demo/reset", () => {
       [
         { delete: "userDecision.contra.ana.sfonrt.business" },
         { patch: "contra.ana.sfonrt.business" },
+        { delete: "userDecision.contra.vs.jfklhr.economy" },
+        { patch: "contra.vs.jfklhr.economy" },
       ],
     ]);
   });

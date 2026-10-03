@@ -25,6 +25,11 @@
  * sent to /api/traverse, the `held` logic, and the <RoutingResult/> wiring — is
  * UNCHANGED. Only className/markup differs.
  *
+ * EXAMPLES: a row of chips (lib/examples.ts) fills origin/destination/cabin
+ * and the held currencies; it never submits. When solve reports several
+ * blocking contradictions, each is resolved (one POST /api/resolve each, same
+ * body shape) before the single re-traverse + re-solve.
+ *
  * PRESENTATION NOTE (Context MCP): QueryTrace shows which read path served the
  * traversal (`via` from /api/traverse), and a separate, NON-AWAITED
  * POST /api/kb fills a "Knowledge Base (via Context MCP)" evidence panel after
@@ -42,11 +47,13 @@ import type { ResolutionCardProps } from "@/components/ResolutionCard";
 import { KBEvidencePanel } from "@/components/KBEvidencePanel";
 import type { KbEvidence } from "@/lib/kbEvidence";
 import { ResetDemoButton } from "@/components/ResetDemoButton";
+import { EXAMPLE_CHIP_CLASS, EXAMPLE_TRIPS, type ExampleTrip } from "@/lib/examples";
 
 // The currencies a user can hold, mapped to their deterministic seed _ids (§5.1).
 const CURRENCIES: { id: string; code: string; name: string }[] = [
   { id: "cur.amex", code: "AMEX_MR", name: "American Express Membership Rewards" },
   { id: "cur.chase", code: "CHASE_UR", name: "Chase Ultimate Rewards" },
+  { id: "cur.capone", code: "CAPONE", name: "Capital One Miles" },
 ];
 
 const CABINS: Cabin[] = ["economy", "premium", "business", "first"];
@@ -152,6 +159,15 @@ export default function SolverPage() {
     setState(null);
     setKb(null);
     setError(null);
+  }
+
+  // Example chip: fill the form only. Never submits; the user still clicks
+  // "Construct cheapest routing".
+  function applyExample(ex: ExampleTrip) {
+    setOrigin(ex.origin);
+    setDestination(ex.destination);
+    setCabin(ex.cabin);
+    setHeld(Object.fromEntries(CURRENCIES.map((c) => [c.id, ex.currencyIds.includes(c.id)])));
   }
 
   function toggleCurrency(id: string) {
@@ -262,19 +278,31 @@ export default function SolverPage() {
       next.gatedResult = gated;
       setState({ ...next });
 
-      // 4) If gated, resolve the blocking contradiction, then re-run solve.
+      // 4) If gated, resolve EVERY blocking contradiction (one POST each, same
+      //    body), then re-traverse once and re-run solve.
       if (
         gated.kind === "NOT_COMPUTED" &&
         gated.reason === "UNRESOLVED_CONTRADICTION" &&
         gated.blockingContradictionIds &&
         gated.blockingContradictionIds.length > 0
       ) {
-        const contradictionId = gated.blockingContradictionIds[0];
-        const resolved = await postJson<ResolveResponse>("/api/resolve", {
-          contradictionId,
-        });
+        const contradictionIds = Array.from(new Set(gated.blockingContradictionIds));
+        let resolved: ResolveResponse | undefined;
+        let failed: NotComputedResolvePayload | undefined;
+        for (const contradictionId of contradictionIds) {
+          const r = await postJson<ResolveResponse>("/api/resolve", {
+            contradictionId,
+          });
+          if (r.kind !== "RESOLVED") {
+            failed = r;
+            break;
+          }
+          // The ResolutionCard shows the first resolution (the KB issue view
+          // shows the first contradiction).
+          resolved ??= r;
+        }
 
-        if (resolved.kind === "RESOLVED") {
+        if (!failed && resolved && resolved.kind === "RESOLVED") {
           next.resolution = {
             chosenClaim: resolved.chosenClaim,
             chosenPointsCost: resolved.chosenPointsCost,
@@ -317,13 +345,13 @@ export default function SolverPage() {
           });
           next.finalResult = finalResult;
           setState({ ...next });
-        } else {
+        } else if (failed) {
           // Resolution itself degraded to NOT_COMPUTED (fail-closed): surface it.
           next.finalResult = {
             kind: "NOT_COMPUTED",
             reason: "UNRESOLVED_CONTRADICTION",
-            blockingContradictionIds: resolved.blockingContradictionIds,
-            message: resolved.message,
+            blockingContradictionIds: failed.blockingContradictionIds,
+            message: failed.message,
           };
           setState({ ...next });
         }
@@ -391,6 +419,24 @@ export default function SolverPage() {
         {/* ---------------------------------------------------------------- */}
         {/* Trip-request form — Warm Card Surface                            */}
         {/* ---------------------------------------------------------------- */}
+        <div className="flex flex-col gap-[var(--spacing-16)]">
+        <div aria-label="Example trips" role="group" className="max-w-[720px]">
+          <p className={LABEL_CLASS}>Try an example (fills the form)</p>
+          <div className="mt-[var(--spacing-16)] flex flex-wrap gap-[var(--spacing-8)]">
+            {EXAMPLE_TRIPS.map((ex) => (
+              <button
+                key={ex.label}
+                type="button"
+                title={ex.hint}
+                disabled={running}
+                onClick={() => applyExample(ex)}
+                className={EXAMPLE_CHIP_CLASS}
+              >
+                {ex.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <form
           onSubmit={runPipeline}
           className="grid h-max max-w-[720px] gap-[var(--spacing-24)] rounded-[var(--radius-2xl)] border border-[color-mix(in_srgb,var(--color-carbon-ink)_12%,transparent)] bg-[var(--color-parchment-cream)] p-[var(--spacing-40)] shadow-[0px_0px_40px_0px_rgba(171,171,156,0.4)]"
@@ -467,6 +513,7 @@ export default function SolverPage() {
             </button>
           </div>
         </form>
+        </div>
 
         {/* ---------------------------------------------------------------- */}
         {/* Results column — loading / error / empty / result               */}

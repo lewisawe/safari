@@ -1,8 +1,9 @@
 // app/api/demo/reset/route.ts
 //
-// POST /api/demo/reset — puts the 85k vs 90k contradiction back to unresolved
-// so the gate fires again for the next judge. Same two mutations as the seed's
-// gate reset (lib/demoReset.ts), on fixed ids only; the request body is
+// POST /api/demo/reset — puts BOTH seeded contradictions (ANA SFO→NRT business
+// 85k vs 90k, VS JFK→LHR economy 25k vs 20k) back to unresolved so the gates
+// fire again for the next judge. Same mutations as the seed's gate reset
+// (lib/demoReset.ts), in one transaction on fixed ids only; the request body is
 // ignored. Rate-limited per IP (best-effort, in-memory) so it cannot be
 // hammered. Typed JSON either way: { ok: true } or { ok: false, error, message }.
 
