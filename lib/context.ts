@@ -93,7 +93,10 @@ function redact(text: string): string {
   const token = process.env.SANITY_CONTEXT_TOKEN;
   let out = text.replace(/(https?:\/\/[^\s?"'<>]+)\?[^\s"'<>]*/g, "$1?…");
   if (token && token.length > 0) out = out.split(token).join("[redacted]");
-  return out.replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer [redacted]").slice(0, 300);
+  return out
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer [redacted]")
+    .replace(/\s+/g, " ")
+    .slice(0, 300);
 }
 
 /** Map any thrown value to a ContextError (duck-typed; no instanceof on lib errors). */
