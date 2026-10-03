@@ -24,7 +24,8 @@
 // Sanity Context MCP: traverseRoutings and readContradictions run their FIXED
 // queries through Context MCP `groq_query` (GROQ mode) when configured, with a
 // visible `via` marker and a fallback to @sanity/client (lib/traverse.ts). The
-// KB outline (`initial_context`) is inlined into the system prompt.
+// KB outline (`initial_context`) is inlined into the system prompt, served from
+// a 5-minute single-flight in-memory cache (lib/kbOutlineCache.ts).
 //
 // Why there is NO raw `groq_query` agent tool: free-form GROQ could pull
 // `pointsCost` values from unvetted rows that never pass through the
@@ -59,11 +60,12 @@ import { runTraversal, runContentQuery } from "@/lib/traverse";
 import {
   ContextError,
   contextConfig,
-  contextKbOutline,
   contextKbRead,
   isKbConfigured,
   mapContextError,
+  type ContextConfig,
 } from "@/lib/context";
+import { getKbOutlineCached } from "@/lib/kbOutlineCache";
 import { toCandidates } from "@/lib/toCandidates";
 import { solve } from "@/solver/solve";
 import {
@@ -407,10 +409,11 @@ const KB_OUTLINE_MAX_CHARS = 6000;
  * The outline is wrapped as delimited, synthetic REFERENCE MATERIAL (not
  * instructions). Any failure omits it with a single "not connected" line.
  */
-async function buildSystemPrompt(kbEnabled: boolean): Promise<string> {
-  if (!kbEnabled) return SYSTEM_PROMPT;
+async function buildSystemPrompt(cfg: ContextConfig | null): Promise<string> {
+  if (!isKbConfigured(cfg)) return SYSTEM_PROMPT;
   try {
-    const { text } = await contextKbOutline({ timeoutMs: 8000 });
+    // Cached (TTL + single-flight) so agent turns do not block on initial_context.
+    const { text } = await getKbOutlineCached(cfg, { timeoutMs: 8000 });
     const outline = text.length > KB_OUTLINE_MAX_CHARS ? `${text.slice(0, KB_OUTLINE_MAX_CHARS)}\n…(truncated)` : text;
     return [
       SYSTEM_PROMPT,
@@ -454,8 +457,9 @@ export async function POST(request: Request): Promise<Response> {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const modelMessages = await convertToModelMessages(messages);
 
-  const kbEnabled = isKbConfigured(contextConfig());
-  const system = await buildSystemPrompt(kbEnabled);
+  const cfg = contextConfig();
+  const kbEnabled = isKbConfigured(cfg);
+  const system = await buildSystemPrompt(cfg);
   const tools = kbEnabled ? { ...AGENT_TOOLS, readKnowledgeBase } : AGENT_TOOLS;
 
   const result = streamText({
