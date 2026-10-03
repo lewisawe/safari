@@ -12,6 +12,13 @@
 // Gate reset (§5.6, §7.4 fresh-demo): the contradiction is written with NO
 // committedResolution field (absence is the unresolved signal), and the derived
 // userDecision id is DELETED so every fresh seed restores the always-fires gate.
+//
+// Source excerpts (Sanity Context Knowledge Base): every source carries a short
+// SYNTHETIC prose `excerpt`. A Knowledge Base built from this dataset reads
+// them, so it can detect the 85,000 (printed chart) vs 90,000 (devaluation
+// notice, effective 2026-09-25) conflict on ANA SFO→NRT business. The numbers
+// match the chart entries and claims exactly. Excerpts are evidence only; the
+// solver never reads them.
 
 import { createClient } from "@sanity/client";
 
@@ -106,6 +113,8 @@ const sources = [
     authority: "official-program",
     publishedDate: "2025-01-15T00:00:00.000Z",
     url: "https://example.invalid/ana-chart",
+    excerpt:
+      "SYNTHETIC — not real award pricing. ANA Mileage Club partner award chart (printed edition, published 2025-01-15). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 85,000 points. Taxes and carrier surcharges are collected separately at booking.",
     synthetic: true,
   },
   {
@@ -115,6 +124,8 @@ const sources = [
     authority: "devaluation-notice",
     publishedDate: "2026-09-25T00:00:00.000Z",
     url: "https://example.invalid/ana-devaluation",
+    excerpt:
+      "SYNTHETIC — not real award pricing. ANA devaluation notice. Effective 2026-09-25, business-class partner awards from San Francisco (SFO) to Tokyo Narita (NRT) rise to 90,000 points one-way. This notice supersedes the 85,000-point price in the printed partner award chart.",
     synthetic: true,
   },
   {
@@ -124,6 +135,8 @@ const sources = [
     authority: "official-program",
     publishedDate: "2025-03-01T00:00:00.000Z",
     url: "https://example.invalid/vs-chart",
+    excerpt:
+      "SYNTHETIC — not real award pricing. Virgin Atlantic Flying Club partner chart (published 2025-03-01). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 95,000 points.",
     synthetic: true,
   },
   {
@@ -133,6 +146,8 @@ const sources = [
     authority: "official-program",
     publishedDate: "2025-02-10T00:00:00.000Z",
     url: "https://example.invalid/ac-chart",
+    excerpt:
+      "SYNTHETIC — not real award pricing. Air Canada Aeroplan partner chart (published 2025-02-10). Business class, San Francisco (SFO) to Tokyo Narita (NRT), one-way on a partner itinerary: 105,000 points.",
     synthetic: true,
   },
   {
@@ -142,6 +157,8 @@ const sources = [
     authority: "transfer-partner",
     publishedDate: "2026-01-01T00:00:00.000Z",
     url: "https://example.invalid/transfer-ratios",
+    excerpt:
+      "SYNTHETIC — not real transfer terms. Transfer partner ratio table (2026-01-01): Amex Membership Rewards → ANA Mileage Club 1:1 (about 48 hours to post); Amex Membership Rewards → Virgin Atlantic Flying Club 1:1 (instant); Chase Ultimate Rewards → Virgin Atlantic Flying Club 1:1 (instant); Chase Ultimate Rewards → Air Canada Aeroplan 1:1 (instant).",
     synthetic: true,
   },
 ];
