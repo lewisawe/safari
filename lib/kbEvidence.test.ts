@@ -43,6 +43,12 @@ describe("readKbEvidence", () => {
   });
 
   it("configured -> reads the ANA paths, returns markdown + citations, no price keys", async () => {
+    // No knowledge_base_search tool on this endpoint -> outline fallback.
+    const searchClient = {
+      callTool: vi.fn(),
+      listTools: vi.fn().mockResolvedValue({ tools: [{ name: "knowledge_base_read", inputSchema: {} }] }),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
     const outlineClient = {
       callTool: vi.fn().mockResolvedValue({ content: [{ type: "text", text: OUTLINE }] }),
       listTools: vi.fn(),
@@ -53,7 +59,10 @@ describe("readKbEvidence", () => {
       listTools: vi.fn().mockResolvedValue({ tools: [] }),
       close: vi.fn().mockResolvedValue(undefined),
     };
-    createMCPClient.mockResolvedValueOnce(outlineClient).mockResolvedValueOnce(readClient);
+    createMCPClient
+      .mockResolvedValueOnce(searchClient)
+      .mockResolvedValueOnce(outlineClient)
+      .mockResolvedValueOnce(readClient);
 
     const ev = await readKbEvidence({ origin: "SFO", destination: "NRT", programCodes: ["ANA", "VS"] });
     expect(ev.configured && "ok" in ev && ev.ok).toBe(true);
@@ -73,6 +82,8 @@ describe("readKbEvidence", () => {
     ]);
     expect(ev.kbId).toBe("kbSafari");
     for (const k of PRICE_KEYS) expect((ev as Record<string, unknown>)[k]).toBeUndefined();
+    expect(searchClient.callTool).not.toHaveBeenCalled();
+    expect(searchClient.close).toHaveBeenCalledTimes(1);
     expect(outlineClient.close).toHaveBeenCalledTimes(1);
     expect(readClient.close).toHaveBeenCalledTimes(1);
   });

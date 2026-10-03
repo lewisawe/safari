@@ -9,9 +9,11 @@
 //               counts and each contradiction's resolved/unresolved status
 //               (compare before/after a resolve to check read-after-write
 //               freshness through Context).
-// 3. KB mode   — list tools + their inputSchemas; print the outline header,
-//               the deterministically matched entry paths, and the first 40
-//               lines of the matched entries.
+// 3. KB mode   — list tools + their inputSchemas; print the outline header;
+//               for BOTH demo routes (SFO→NRT/ANA, JFK→LHR/VS) print the
+//               deterministically selected entry paths (knowledge_base_search,
+//               outline fallback; same selection as /api/kb) and the first 40
+//               lines of the read entries.
 //
 // Every documented failure prints its actionable message (403
 // contextGrantRequired, -32004 schema not deployed, -32005 no KB, unknown kb
@@ -29,7 +31,8 @@ import {
   openKbContext,
 } from "../lib/context";
 import { TRAVERSE_ROUTINGS_QUERY } from "../lib/groq";
-import { KB_DEFAULT_TERMS, parseKbOutline, pickRelevantPaths } from "../lib/kbOutline";
+import { parseKbOutline } from "../lib/kbOutline";
+import { buildKbSearchQuery, selectKbEntries, selectKbPaths } from "../lib/kbEvidence";
 import type { TraverseRow } from "../lib/fixtures/sfo-nrt-business.rows";
 
 let exitCode = 0;
@@ -122,7 +125,7 @@ async function main(): Promise<void> {
         const { tools } = await client.listTools();
         console.log(`Tools: ${tools.map((t) => t.name).join(", ") || "(none)"}`);
         for (const t of tools) {
-          if (t.name === "initial_context" || t.name === "knowledge_base_read") {
+          if (t.name === "initial_context" || t.name.startsWith("knowledge_base_")) {
             console.log(`  ${t.name} inputSchema: ${JSON.stringify(t.inputSchema)}`);
           }
         }
@@ -132,23 +135,41 @@ async function main(): Promise<void> {
     } catch (err) {
       report("kb:listTools", err);
     }
+    let outlineText: string | null = null;
     try {
       const { text, kbId } = await contextKbOutline({ cfg });
+      outlineText = text;
       console.log(`Outline (kb id: ${kbId ?? "?"}), first 15 lines:`);
       console.log(text.split("\n").slice(0, 15).map((l) => `  | ${l}`).join("\n"));
-      const outline = parseKbOutline(text);
-      const paths = pickRelevantPaths(outline.entries, KB_DEFAULT_TERMS);
-      console.log(`Parsed entries: ${outline.entries.length}. Matched paths: ${paths.join(", ") || "(none)"}`);
-      if (paths.length > 0) {
-        const { markdown } = await contextKbRead(paths, { cfg });
-        console.log("knowledge_base_read, first 40 lines:");
-        console.log(markdown.split("\n").slice(0, 40).map((l) => `  | ${l}`).join("\n"));
-      } else {
-        exitCode = 1;
-        console.error("No outline entries matched ANA/SFO/NRT/chart/devaluation; check the raw outline above.");
-      }
+      console.log(`Parsed outline entries: ${parseKbOutline(text).entries.length}`);
     } catch (err) {
-      report("kb:read", err);
+      report("kb:outline", err);
+    }
+    const routes = [
+      { origin: "SFO", destination: "NRT", programCodes: ["ANA"] },
+      { origin: "JFK", destination: "LHR", programCodes: ["VS"] },
+    ];
+    for (const req of routes) {
+      const label = `${req.origin}→${req.destination} (${req.programCodes.join(",")})`;
+      try {
+        if (outlineText) {
+          const fb = selectKbEntries(outlineText, req).paths;
+          console.log(`\n[${label}] outline-fallback paths: ${fb.join(", ") || "(none)"}`);
+        }
+        console.log(`[${label}] search query: "${buildKbSearchQuery(req)}"`);
+        const sel = await selectKbPaths(req, { cfg });
+        console.log(`[${label}] Matched paths (via ${sel.via}): ${sel.paths.join(", ") || "(none)"}`);
+        if (sel.paths.length > 0) {
+          const { markdown } = await contextKbRead(sel.paths, { cfg });
+          console.log(`[${label}] knowledge_base_read, first 40 lines:`);
+          console.log(markdown.split("\n").slice(0, 40).map((l) => `  | ${l}`).join("\n"));
+        } else {
+          exitCode = 1;
+          console.error(`[${label}] No KB entries matched; check the raw outline above.`);
+        }
+      } catch (err) {
+        report(`kb:read ${label}`, err);
+      }
     }
   }
 

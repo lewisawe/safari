@@ -511,3 +511,149 @@ export async function contextKbRead(
     return { markdown };
   });
 }
+
+// ----------------------------------------------------------------------------
+// Knowledge Base search (server-ranked entry selection, no LLM)
+// ----------------------------------------------------------------------------
+
+export interface KbSearchResult {
+  path: string;
+  title: string;
+  summary: string;
+  score: number | null;
+}
+
+/** Pick knowledge_base_search argument names from its inputSchema. */
+export function resolveKbSearchArgNames(schema: JsonSchemaLike | undefined): {
+  idArg: string;
+  queryArg: string;
+  limitArg: string | null;
+} {
+  const fallback = { idArg: "knowledgeBase", queryArg: "query", limitArg: null };
+  const props = schema?.properties;
+  if (!props || typeof props !== "object") return fallback;
+  const keys = Object.keys(props);
+  const isType = (k: string, t: string) => {
+    const ty = props[k]?.type;
+    return Array.isArray(ty) ? ty.includes(t) : ty === t;
+  };
+  const strings = keys.filter((k) => isType(k, "string"));
+  const idArg = strings.find((k) => /knowledge.?base|kb/i.test(k));
+  const queryArg = strings.find((k) => /^(query|q|text|keywords?)$/i.test(k));
+  const limitArg = keys.find((k) => /^(limit|max|top_?k)$/i.test(k) && (isType(k, "integer") || isType(k, "number")));
+  if (!idArg || !queryArg) return fallback;
+  return { idArg, queryArg, limitArg: limitArg ?? null };
+}
+
+function toSearchResult(v: unknown): KbSearchResult | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const path = typeof o.path === "string" ? o.path : null;
+  if (!path) return null;
+  return {
+    path,
+    title: typeof o.title === "string" ? o.title : "",
+    summary: typeof o.summary === "string" ? o.summary : "",
+    score: typeof o.score === "number" && Number.isFinite(o.score) ? o.score : null,
+  };
+}
+
+/**
+ * Parse knowledge_base_search output into ranked results. Prefers structured
+ * content (an array of {path,title,summary,score}, bare or under
+ * results/entries/paths/items); otherwise parses the numbered Markdown list:
+ *   1. `path` (score 18.57): Title
+ *      summary line(s)
+ * Order is the server's ranking. Duplicate paths keep their first rank.
+ */
+export function parseKbSearchResults(text: string, structured?: unknown): KbSearchResult[] {
+  const out: KbSearchResult[] = [];
+  const seen = new Set<string>();
+  const push = (r: KbSearchResult | null) => {
+    if (!r || seen.has(r.path)) return;
+    seen.add(r.path);
+    out.push(r);
+  };
+
+  let arr: unknown = structured;
+  if (arr && typeof arr === "object" && !Array.isArray(arr)) {
+    const o = arr as Record<string, unknown>;
+    arr = o.results ?? o.entries ?? o.paths ?? o.items;
+  }
+  if (Array.isArray(arr)) {
+    for (const v of arr) push(typeof v === "string" ? { path: v, title: "", summary: "", score: null } : toSearchResult(v));
+    if (out.length > 0) return out;
+  }
+
+  const lines = (text ?? "").split(/\r?\n/);
+  const head = /^\s*\d+[.)]\s+`([^`\s]+)`\s*(?:\(\s*score\s+(-?[\d.]+)\s*\))?\s*:?\s*(.*)$/i;
+  let current: KbSearchResult | null = null;
+  for (const line of lines) {
+    const m = head.exec(line);
+    if (m) {
+      if (current) push(current);
+      const score = m[2] !== undefined ? Number(m[2]) : NaN;
+      current = { path: m[1], title: m[3].trim(), summary: "", score: Number.isFinite(score) ? score : null };
+      continue;
+    }
+    if (!current) continue;
+    if (/^\s+\S/.test(line)) {
+      current.summary = current.summary ? `${current.summary} ${line.trim()}` : line.trim();
+    } else {
+      push(current);
+      current = null;
+    }
+  }
+  if (current) push(current);
+  return out;
+}
+
+/**
+ * Ranked entry search via `knowledge_base_search` (return=paths). Same client,
+ * error mapping and timeout pattern as the other KB helpers. Throws a typed
+ * ContextError on failure (tool missing -> tool_error); never fabricates hits.
+ */
+export async function contextKbSearch(
+  query: string,
+  opts: OpenOpts & { limit?: number } = {},
+): Promise<{ results: KbSearchResult[]; text: string }> {
+  const q = typeof query === "string" ? query.trim() : "";
+  if (!q) throw new ContextError("tool_error", "knowledge_base_search needs a non-empty query");
+  const timeout = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const cfg = opts.cfg === undefined ? contextConfig() : opts.cfg;
+  if (!isKbConfigured(cfg)) throw new ContextError("not_configured", "SANITY_KB_ID is not set");
+  const client = await openKbContext({
+    ...opts,
+    cfg,
+    tools: opts.tools ?? ["knowledge_base_search"],
+  });
+  return withClient(client, async (c) => {
+    let schema: JsonSchemaLike | undefined;
+    let listed = false;
+    try {
+      const l = await c.listTools({ options: { timeout } });
+      listed = true;
+      const t = l.tools.find((x) => x.name === "knowledge_base_search");
+      if (!t) throw new ContextError("tool_error", "knowledge_base_search is not available");
+      schema = t.inputSchema as JsonSchemaLike | undefined;
+    } catch (err) {
+      if (listed) throw err;
+      schema = undefined; // listing failed: try the documented arg names
+    }
+    const { idArg, queryArg, limitArg } = resolveKbSearchArgNames(schema);
+    const args: Record<string, unknown> = { [idArg]: cfg.kbId, [queryArg]: q };
+    if (limitArg && opts.limit) args[limitArg] = Math.max(1, Math.min(20, Math.floor(opts.limit)));
+    const raw = (await c.callTool({
+      name: "knowledge_base_search",
+      arguments: args,
+      options: { timeout },
+    })) as LooseCallToolResult;
+    throwIfError(raw);
+    const text = joinText(raw) || (typeof raw.structuredContent === "string" ? raw.structuredContent : "");
+    const results = parseKbSearchResults(text, raw.structuredContent);
+    if (results.length === 0 && !text) {
+      throw new ContextError("malformed", "knowledge_base_search returned no text");
+    }
+    return { results, text };
+  });
+}

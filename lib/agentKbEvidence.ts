@@ -6,9 +6,9 @@
 // finds a contradicted chart entry, and attaches the result to that tool's
 // output as `knowledgeBase` evidence.
 //
-// Same selection as POST /api/kb (selectKbEntries: default terms + route +
-// program codes, no LLM). The outline comes from the shared TTL cache so the
-// extra read costs one `knowledge_base_read` round-trip.
+// Same selection as POST /api/kb (selectKbPaths: server-ranked
+// knowledge_base_search, falling back to outline matching; no LLM). The
+// fallback outline comes from the shared TTL cache.
 //
 // EVIDENCE ONLY: the result never feeds toCandidates/solve or the gate.
 // FAIL-SOFT: every failure (not configured, auth, no match, timeout) becomes
@@ -23,7 +23,7 @@ import {
   type ContextConfig,
   type ContextErrorKind,
 } from "./context";
-import { extractCitations, selectKbEntries } from "./kbEvidence";
+import { extractCitations, selectKbPaths } from "./kbEvidence";
 import { getKbOutlineCached } from "./kbOutlineCache";
 import type { TraverseRow } from "./fixtures/sfo-nrt-business.rows";
 
@@ -76,8 +76,11 @@ export async function readAgentKbEvidence(
   try {
     return await withTimeout(
       (async () => {
-        const { text } = await getKbOutlineCached(cfg, { timeoutMs });
-        const { paths } = selectKbEntries(text, req);
+        const { paths } = await selectKbPaths(req, {
+          cfg,
+          timeoutMs,
+          getOutline: () => getKbOutlineCached(cfg, { timeoutMs }),
+        });
         if (paths.length === 0) {
           throw new ContextError("tool_error", "no matching KB entries for the contradicted routing");
         }

@@ -6,9 +6,14 @@ vi.mock("./kbOutlineCache", () => ({
   getKbOutlineCached: (...a: unknown[]) => getKbOutlineCached(...a),
 }));
 const contextKbRead = vi.fn();
+const contextKbSearch = vi.fn();
 vi.mock("./context", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./context")>();
-  return { ...actual, contextKbRead: (...a: unknown[]) => contextKbRead(...a) };
+  return {
+    ...actual,
+    contextKbRead: (...a: unknown[]) => contextKbRead(...a),
+    contextKbSearch: (...a: unknown[]) => contextKbSearch(...a),
+  };
 });
 
 import { ContextError, type ContextConfig } from "./context";
@@ -26,6 +31,9 @@ const REQ = { origin: "SFO", destination: "NRT", programCodes: ["ANA"] };
 beforeEach(() => {
   getKbOutlineCached.mockReset();
   contextKbRead.mockReset();
+  contextKbSearch.mockReset();
+  // Default: search unavailable -> the outline fallback (cached outline).
+  contextKbSearch.mockRejectedValue(new ContextError("tool_error", "knowledge_base_search is not available"));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -55,6 +63,22 @@ describe("readAgentKbEvidence", () => {
       citations: [{ text: "ANA", url: "https://example.invalid/a" }],
       presentationOnly: true,
     });
+  });
+
+  it("prefers knowledge_base_search: route entry + contradiction context, outline untouched", async () => {
+    contextKbSearch.mockResolvedValue({
+      text: "",
+      results: [
+        { path: "award_prices/transpacific_sfonrt", title: "SFO–NRT Award Prices", summary: "SFO to NRT: ANA", score: 15.5 },
+        { path: "devaluation_notices", title: "Devaluation & Repricing Notices", summary: "changes", score: 3.98 },
+        { path: "transfer_partners", title: "Transfer Partners", summary: "ratios", score: 0.88 },
+      ],
+    });
+    contextKbRead.mockResolvedValue({ markdown: "# SFO" });
+    const ev = await readAgentKbEvidence(CFG, REQ);
+    expect(ev).toMatchObject({ paths: ["award_prices/transpacific_sfonrt", "devaluation_notices"] });
+    expect(contextKbSearch).toHaveBeenCalledWith("SFO NRT ANA", expect.objectContaining({ cfg: CFG }));
+    expect(getKbOutlineCached).not.toHaveBeenCalled();
   });
 
   it("maps a Context error to a typed error, never throws", async () => {

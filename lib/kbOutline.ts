@@ -9,7 +9,9 @@
 //
 // The exact outline line format is not documented, so the parser is tolerant:
 // an entry is any line carrying a path token (a backticked token, else the
-// first whitespace-free token containing "/" or ".md"). Unknown lines are
+// first whitespace-free token containing "/" or ".md", else a line that is a
+// single bare token like `devaluation_notices`, optionally tagged [core] /
+// [peripheral], as in the summary-less outline format). Unknown lines are
 // ignored. Relative imports only (used by scripts/check-context.ts under tsx).
 
 export interface KbOutlineEntry {
@@ -44,7 +46,7 @@ export function programKbTerms(code: string): string[] {
   return PROGRAM_KB_TERMS[code] ?? [code];
 }
 
-function extractPath(line: string): { path: string; rest: string } | null {
+function extractPath(line: string, allowBare = true): { path: string; rest: string } | null {
   const tick = /`([^`\s]+)`/.exec(line);
   if (tick) {
     return { path: tick[1], rest: line.slice(tick.index + tick[0].length) };
@@ -57,7 +59,28 @@ function extractPath(line: string): { path: string; rest: string } | null {
       return { path: t, rest: tokens.slice(i + 1).join(" ") };
     }
   }
+  // Summary-less outline format: the whole line is one bare path token.
+  const bare = line.trim();
+  if (allowBare && /^[A-Za-z0-9][A-Za-z0-9_\-/.]*$/.test(bare) && !/^\d+[.)]?$/.test(bare)) {
+    return { path: bare, rest: "" };
+  }
   return null;
+}
+
+/**
+ * True when an outline entry is about the origin→destination route: its path
+ * or summary names either code at a word start, or its path packs both codes
+ * together (compact names like `transpacific_sfonrt`).
+ */
+export function entryOnRoute(entry: KbOutlineEntry, origin: string, destination: string): boolean {
+  const codes = [origin, destination].filter((t) => typeof t === "string" && t.trim() !== "");
+  if (codes.length === 0) return false;
+  if (pickRelevantPaths([entry], codes, 1).length > 0) return true;
+  if (codes.length < 2) return false;
+  const compact = entry.path.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const o = origin.trim().toLowerCase();
+  const d = destination.trim().toLowerCase();
+  return compact.includes(o + d) || compact.includes(d + o);
 }
 
 export function parseKbOutline(text: string): KbOutline {
@@ -76,10 +99,14 @@ export function parseKbOutline(text: string): KbOutline {
       kbId = idMatch[1];
       continue;
     }
+    // A non-heading first line is the title; it may still carry a path, but a
+    // lone bare word there ("KB") is the title, not an entry.
+    let isTitleLine = false;
     if (title === null) {
       const h = /^#{1,6}\s+(.*)$/.exec(line);
       title = h ? h[1].trim() : line;
       if (h) continue;
+      isTitleLine = true;
     }
     if (/^#{1,6}\s/.test(line)) continue;
 
@@ -91,7 +118,7 @@ export function parseKbOutline(text: string): KbOutline {
       body = body.replace(tagMatch[0], " ").replace(/\s{2,}/g, " ").trim();
     }
 
-    const found = extractPath(body);
+    const found = extractPath(body, !isTitleLine);
     if (!found || seen.has(found.path)) continue;
     const summary = found.rest.replace(/^\s*(—|–|-|:)\s*/, "").trim();
     seen.add(found.path);
