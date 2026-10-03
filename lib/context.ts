@@ -57,9 +57,9 @@ const KIND_MESSAGES: Record<ContextErrorKind, string> = {
   unauthorized:
     "Context MCP rejected the token (401/403): SANITY_CONTEXT_TOKEN must be a valid ORGANIZATION token with the Context Viewer role.",
   grant_required:
-    "Context MCP returned 403 contextGrantRequired: SANITY_CONTEXT_TOKEN must be an ORGANIZATION token with the Context Viewer role (sanity.knowledge-base.read); project tokens are rejected.",
+    "Context MCP rejected the token (403 contextGrantRequired / JSON-RPC -32007): SANITY_CONTEXT_TOKEN must be an ORGANIZATION token with the Context Viewer role (sanity.knowledge-base.read); project tokens are rejected.",
   schema_not_deployed:
-    "Context MCP error -32004 (schema not deployed): run `npx sanity schema deploy` in studio-safari.",
+    "Context MCP error -32004 (schema / Studio not deployed): in studio-safari run `npx sanity schema deploy`, and deploy the Studio itself (`npx sanity deploy`, Studio v5.1.0+); Context only serves datasets with a deployed Studio application.",
   no_knowledge_base:
     "Context MCP error -32005: the endpoint has no knowledge base, or the KB is not built yet. Build the KB and add it to the endpoint.",
   unknown_kb:
@@ -110,11 +110,18 @@ export function mapContextError(err: unknown): ContextError {
     name?: unknown;
   };
   const status = typeof e.statusCode === "number" ? e.statusCode : undefined;
-  const code = typeof e.code === "number" ? e.code : undefined;
   const body = typeof e.responseBody === "string" ? e.responseBody : "";
   const message = typeof e.message === "string" ? e.message : String(err);
+  // JSON-RPC errors can arrive as a thrown error's `code`, or inside an HTTP
+  // error body (e.g. HTTP 400 {"jsonrpc":"2.0","error":{"code":-32004,...}}).
+  let code = typeof e.code === "number" ? e.code : undefined;
+  if (code === undefined) {
+    const m = /"code"\s*:\s*(-32\d{3})/.exec(body + " " + message);
+    if (m) code = Number(m[1]);
+  }
   const detail = redact(message);
 
+  if (code === -32007) return new ContextError("grant_required", detail, { status, code });
   if (status === 401) return new ContextError("unauthorized", detail, { status });
   if (status === 403) {
     const kind = /contextGrantRequired/i.test(body + " " + message)
@@ -271,8 +278,97 @@ export interface GroqMeta {
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
+const CURRENCY_ID_RE = /^[a-z0-9._-]+$/;
+const IATA_RE = /^[A-Z]{3}$/;
+const CABINS = new Set(["economy", "premium", "business", "first"]);
+
 /**
- * Run a GROQ query through the Context MCP `groq_query` tool. Returns the
+ * Strict allowlist check for the traversal params BEFORE they are inlined as
+ * GROQ literals on the Context path (defense-in-depth on top of JSON
+ * encoding): currencyIds ^[a-z0-9._-]+$, origin/destination ^[A-Z]{3}$,
+ * cabin in economy|premium|business|first. Anything else throws
+ * ContextError("malformed") — the value is never inlined.
+ */
+export function assertTraverseLiteralsSafe(params: {
+  currencyIds: unknown;
+  origin: unknown;
+  destination: unknown;
+  cabin: unknown;
+}): void {
+  const { currencyIds, origin, destination, cabin } = params;
+  const ok =
+    Array.isArray(currencyIds) &&
+    currencyIds.every((c) => typeof c === "string" && CURRENCY_ID_RE.test(c)) &&
+    typeof origin === "string" &&
+    IATA_RE.test(origin) &&
+    typeof destination === "string" &&
+    IATA_RE.test(destination) &&
+    typeof cabin === "string" &&
+    CABINS.has(cabin);
+  if (!ok) {
+    throw new ContextError("malformed", "traversal params failed the literal allowlist; not inlined");
+  }
+}
+
+/**
+ * Bind `$name` GROQ parameters as literals. Context MCP `groq_query` rejects
+ * parameters ("GROQ parameters ($variable) are not supported. Use literal
+ * values instead"), so the SAME fixed query is sent with each `$param`
+ * replaced by its JSON encoding. JSON strings/numbers/booleans/null/arrays are
+ * valid GROQ literals and JSON.stringify escapes quotes and backslashes, so a
+ * value can't break out of its literal. `$` inside string literals and `//`
+ * comments is left alone. A referenced-but-missing param, or a value that is
+ * not a scalar / array of scalars, throws (never a guessed query).
+ */
+export function bindGroqParams(query: string, params: Record<string, unknown>): string {
+  const isScalar = (v: unknown) =>
+    v === null || ["string", "number", "boolean"].includes(typeof v);
+  const literal = (name: string): string => {
+    if (!Object.prototype.hasOwnProperty.call(params, name)) {
+      throw new ContextError("malformed", `GROQ param $${name} referenced but not provided`);
+    }
+    const v = params[name];
+    if (typeof v === "number" && !Number.isFinite(v)) {
+      throw new ContextError("malformed", `GROQ param $${name} is not a finite number`);
+    }
+    if (isScalar(v) || (Array.isArray(v) && v.every(isScalar))) return JSON.stringify(v);
+    throw new ContextError("malformed", `GROQ param $${name} has an unsupported type`);
+  };
+
+  let out = "";
+  let i = 0;
+  while (i < query.length) {
+    const ch = query[i];
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < query.length && query[j] !== ch) j += query[j] === "\\" ? 2 : 1;
+      out += query.slice(i, j + 1);
+      i = j + 1;
+    } else if (ch === "/" && query[i + 1] === "/") {
+      const j = query.indexOf("\n", i);
+      const end = j === -1 ? query.length : j;
+      out += query.slice(i, end);
+      i = end;
+    } else if (ch === "$") {
+      const m = /^\$([A-Za-z_][A-Za-z0-9_]*)/.exec(query.slice(i));
+      if (!m) {
+        out += ch;
+        i++;
+      } else {
+        out += literal(m[1]);
+        i += m[0].length;
+      }
+    } else {
+      out += ch;
+      i++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Run a GROQ query through the Context MCP `groq_query` tool (params bound as
+ * literals via bindGroqParams). Returns the
  * unwrapped `result` and `meta`. Throws a typed ContextError on any failure —
  * never an empty/default result.
  */
@@ -282,11 +378,13 @@ export async function contextGroqQuery<T = unknown>(
   opts: OpenOpts = {},
 ): Promise<{ result: T; meta: GroqMeta }> {
   const timeout = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  // Context rejects $params, so bind them as literals first (before connecting).
+  const bound = bindGroqParams(query, params);
   const client = await openGroqContext({ ...opts, tools: opts.tools ?? ["groq_query"] });
   return withClient(client, async (c) => {
     const raw = (await c.callTool({
       name: "groq_query",
-      arguments: { query, params },
+      arguments: { query: bound },
       options: { timeout },
     })) as LooseCallToolResult;
     throwIfError(raw);

@@ -14,6 +14,7 @@ const createMCPClient = vi.fn();
 vi.mock("@ai-sdk/mcp", () => ({ createMCPClient: (...a: unknown[]) => createMCPClient(...a) }));
 
 import { runTraversal, VIA_CONTEXT } from "./traverse";
+import { bindGroqParams } from "./context";
 import { TRAVERSE_ROUTINGS_QUERY } from "./groq";
 import { SFO_NRT_BUSINESS_ROWS, SFO_NRT_BUSINESS_PARAMS } from "./fixtures/sfo-nrt-business.rows";
 import { toCandidates } from "./toCandidates";
@@ -61,7 +62,8 @@ describe("runTraversal", () => {
     expect(c.callTool).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "groq_query",
-        arguments: { query: TRAVERSE_ROUTINGS_QUERY, params: { ...SFO_NRT_BUSINESS_PARAMS } },
+        // Same fixed query, params bound as literals (Context rejects $params).
+        arguments: { query: bindGroqParams(TRAVERSE_ROUTINGS_QUERY, { ...SFO_NRT_BUSINESS_PARAMS }) },
       }),
     );
     expect(mockFetch).not.toHaveBeenCalled();
@@ -152,5 +154,25 @@ describe("/api/traverse route", () => {
     configure(false);
     const res = await traversePOST(req({ origin: 1 }));
     expect(res.status).toBe(400);
+  });
+});
+
+describe("Context literal safety", () => {
+  it("strips Context's extra top-level _id so rows are identical", async () => {
+    configure(true);
+    const withIds = SFO_NRT_BUSINESS_ROWS.map((r) => ({ _id: r.transferPartnerId, ...r }));
+    createMCPClient.mockResolvedValue(client(vi.fn().mockResolvedValue({ structuredContent: { result: withIds } })));
+    const out = await runTraversal(SFO_NRT_BUSINESS_PARAMS);
+    expect(out.rows).toEqual(SFO_NRT_BUSINESS_ROWS);
+  });
+
+  it("an injection attempt is never sent to Context; parameterized fallback serves it", async () => {
+    configure(true);
+    mockFetch.mockResolvedValue([]);
+    const evil = { ...SFO_NRT_BUSINESS_PARAMS, origin: 'SFO" || true || "' };
+    const out = await runTraversal(evil);
+    expect(createMCPClient).not.toHaveBeenCalled();
+    expect(out.via).toBe("sanity-client (Context MCP failed: malformed)");
+    expect(mockFetch).toHaveBeenCalledWith(TRAVERSE_ROUTINGS_QUERY, evil);
   });
 });

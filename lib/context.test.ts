@@ -91,11 +91,11 @@ describe("contextGroqQuery", () => {
       }),
     });
     createMCPClient.mockResolvedValue(c);
-    const { result, meta } = await contextGroqQuery("*[]", { x: 1 });
+    const { result, meta } = await contextGroqQuery("*[x == $x]", { x: 1 });
     expect(result).toEqual(SFO_NRT_BUSINESS_ROWS);
     expect(meta.executedQuery).toBe("Q");
     expect(c.callTool).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "groq_query", arguments: { query: "*[]", params: { x: 1 } } }),
+      expect.objectContaining({ name: "groq_query", arguments: { query: "*[x == 1]" } }),
     );
     expect(c.close).toHaveBeenCalledTimes(1);
   });
@@ -163,6 +163,47 @@ describe("contextGroqQuery", () => {
     await expect(contextGroqQuery("*[]", {})).rejects.toMatchObject({ kind: "no_knowledge_base" });
     createMCPClient.mockRejectedValueOnce({ statusCode: 401, message: "nope" });
     await expect(contextGroqQuery("*[]", {})).rejects.toMatchObject({ kind: "unauthorized" });
+    // Real-world shape: HTTP 400 whose body carries the JSON-RPC -32004 code.
+    createMCPClient.mockRejectedValueOnce({
+      statusCode: 400,
+      responseBody:
+        '{"jsonrpc":"2.0","error":{"code":-32004,"message":"Only datasets with deployed Studio applications are supported."},"id":null}',
+      message: "MCP HTTP Transport Error: POSTing to endpoint (HTTP 400): ...",
+    });
+    await expect(contextGroqQuery("*[]", {})).rejects.toMatchObject({ kind: "schema_not_deployed" });
+  });
+
+  it("bindGroqParams inlines safe JSON literals, skips strings/comments, rejects missing/unsafe", async () => {
+    const { bindGroqParams } = await import("./context");
+    expect(bindGroqParams('*[a in $ids && b == $s && c == "$s"] // $s\n{x}', { ids: ["a", "b"], s: 'q"x' })).toBe(
+      '*[a in ["a","b"] && b == "q\\"x" && c == "$s"] // $s\n{x}',
+    );
+    expect(() => bindGroqParams("*[a == $missing]", {})).toThrow(ContextError);
+    expect(() => bindGroqParams("*[a == $o]", { o: { x: 1 } })).toThrow(ContextError);
+    // A missing param fails before any connection is opened.
+    await expect(contextGroqQuery("*[a == $nope]", {})).rejects.toMatchObject({ kind: "malformed" });
+    expect(createMCPClient).not.toHaveBeenCalled();
+  });
+
+  it("assertTraverseLiteralsSafe allowlists traversal params (rejects injection)", async () => {
+    const { assertTraverseLiteralsSafe } = await import("./context");
+    const good = { currencyIds: ["cur.amex", "cur.chase"], origin: "SFO", destination: "NRT", cabin: "business" };
+    expect(() => assertTraverseLiteralsSafe(good)).not.toThrow();
+    for (const bad of [
+      { ...good, origin: 'SFO" || true || "' },
+      { ...good, destination: "nrt" },
+      { ...good, cabin: "business\" || true" },
+      { ...good, currencyIds: ['cur.amex"]{...}'] },
+      { ...good, currencyIds: "cur.amex" },
+    ]) {
+      expect(() => assertTraverseLiteralsSafe(bad)).toThrow(ContextError);
+    }
+  });
+
+  it("maps JSON-RPC -32007 (project token) to grant_required", () => {
+    const e = mapContextError({ statusCode: 403, responseBody: '{"jsonrpc":"2.0","error":{"code":-32007,"message":"requires an organization API token"}}' });
+    expect(e.kind).toBe("grant_required");
+    expect(e.message).toContain("ORGANIZATION token");
   });
 
   it("error messages never include the token or the URL query string", () => {

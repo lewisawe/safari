@@ -190,6 +190,14 @@ const readContradictions = tool({
       CONTRADICTIONS_QUERY,
       { chartEntryIds },
       Array.isArray,
+      {
+        // Context inlines params as literals: allowlist the ids first.
+        precheck: () => {
+          if (!chartEntryIds.every((id) => /^[a-z0-9._-]+$/.test(id))) {
+            throw new ContextError("malformed", "chartEntryIds failed the literal allowlist");
+          }
+        },
+      },
     );
     return { contradictions, presentationOnly: true as const, via };
   },
